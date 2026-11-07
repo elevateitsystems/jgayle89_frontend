@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mission: SITREP — Phase 1 Frontend
 
-## Getting Started
+Frontend-only prototype of the Mission: SITREP veteran community directory.
+**No backend, database, real auth or payments.** All data is fictional sample data kept in
+`src/data` and persisted to `localStorage` so add / edit / delete demos survive reloads.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run build && npm start   # production check
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requires Node 20+.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Brand assets
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `public/logo.png` — the official logo (supplied artwork, trimmed of its empty transparent border and resized for the web). Rendered untouched by `src/components/brand/logo.tsx`; always place it on a light surface.
+- `public/logo-original.png` — the untouched original file.
+- `src/app/icon.png`, `src/app/apple-icon.png` — favicons cropped from the logo's crosshair-pin emblem.
+- Palette tokens live in `src/app/globals.css` (olive + sand scales).
 
-## Learn More
+## Routes
 
-To learn more about Next.js, take a look at the following resources:
+| Public | Admin (demo, unguarded) |
+| --- | --- |
+| `/` Home | `/admin` Dashboard |
+| `/directory` Search, filters, grid/list/map | `/admin/businesses` Table, search, status, delete |
+| `/directory/[slug]` Business details | `/admin/businesses/new` · `/admin/businesses/[id]/edit` |
+| `/events` · `/events/[slug]` | `/admin/events` Table + slide-over form |
+| `/login` · `/register` | `/admin/import` CSV import |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  app/            routes — (site) public layout, (auth), admin
+  components/     ui (shadcn) · layout · brand · shared · home · directory · events · auth · admin
+  config/         site config (name, nav, logo path)
+  data/           demo data: businesses, events, categories, dashboard, sample images
+  hooks/          React hooks over the stores (use-businesses, use-events, use-session, …)
+  lib/            utils, demo-store (localStorage), filters, csv parser, dates, slugs
+  schemas/        Zod schemas (business, event, auth)
+  services/       data-access layer (async) — the API integration seam
+  types/          shared TypeScript types
+```
 
-## Deploy on Vercel
+## Preparing for the Django REST API
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+UI components never touch `localStorage`. They call hooks (`src/hooks`) which read from stores, and
+mutate through services (`src/services/*-service.ts`) whose methods are already `async` and return plain
+objects. To integrate the API: re-implement the service bodies with `fetch`, and swap the hooks' data source
+for your fetching layer (SWR / React Query). Zod schemas can be reused for request validation.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Demo-only behaviours
+
+- Sign-in accepts any valid email + 8-char password (`fail@…` shows the error state; `taken@…` on register).
+- Event registration, forgot-password and CSV import act on local state only.
+- To restore the original samples, clear this site's localStorage (keys starting with `sitrep:`) and reload.
+- Ratings/reviews are labelled as demo data throughout.
+
+## Credits
+
+Photography via Unsplash (free license), self-hosted in `public/images`. Map tiles © OpenStreetMap contributors.

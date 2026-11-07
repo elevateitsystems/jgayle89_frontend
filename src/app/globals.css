@@ -1,26 +1,211 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
+/* ------------------------------------------------------------------
+   Mission: SITREP design tokens
+   Olive green + warm tan/sand. Change the palette here only.
+------------------------------------------------------------------- */
 @theme inline {
+  /* Brand scales */
+  --color-olive-50: #f4f6ec;
+  --color-olive-100: #e6ebd3;
+  --color-olive-200: #cdd7a9;
+  --color-olive-300: #b0be7f;
+  --color-olive-400: #8c9e57;
+  --color-olive-500: #6e8140;
+  --color-olive-600: #566733;
+  --color-olive-700: #435229;
+  --color-olive-800: #343f21;
+  --color-olive-900: #262e18;
+  --color-olive-950: #161b0e;
+
+  --color-sand-50: #fbf9f4;
+  --color-sand-100: #f5f0e4;
+  --color-sand-200: #ebe3cf;
+  --color-sand-300: #ddd0b2;
+  --color-sand-400: #c9b88c;
+  --color-sand-500: #b09c68;
+  --color-sand-600: #8a7745;
+  --color-sand-700: #6b5c37;
+
+  --color-brass: #b4862f;
+  --color-brass-soft: #f3e6c5;
+
+  /* Semantic (shadcn) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-display), ui-serif, Georgia, serif;
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
+
+  --shadow-card: 0 1px 2px rgb(38 46 24 / 0.05), 0 1px 1px rgb(38 46 24 / 0.03);
+  --shadow-lift: 0 10px 30px -12px rgb(38 46 24 / 0.25), 0 2px 6px rgb(38 46 24 / 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.5rem;
+
+  --background: #faf7f0;
+  --foreground: #1d2314;
+  --card: #ffffff;
+  --card-foreground: #1d2314;
+  --popover: #ffffff;
+  --popover-foreground: #1d2314;
+  --primary: #435229;
+  --primary-foreground: #fbf9f4;
+  --secondary: #ebe3cf;
+  --secondary-foreground: #2c3519;
+  --muted: #f1ebdc;
+  --muted-foreground: #5b6149;
+  --accent: #e6ebd3;
+  --accent-foreground: #262e18;
+  --destructive: #a8321f;
+  --border: #e2d9c1;
+  --input: #d6cbac;
+  --ring: #6e8140;
+
+  --chart-1: #566733;
+  --chart-2: #b4862f;
+  --chart-3: #8c9e57;
+  --chart-4: #8a7745;
+  --chart-5: #343f21;
+
+  --sidebar: #1c2212;
+  --sidebar-foreground: #e6ebd3;
+  --sidebar-primary: #b0be7f;
+  --sidebar-primary-foreground: #161b0e;
+  --sidebar-accent: #2b3419;
+  --sidebar-accent-foreground: #f4f6ec;
+  --sidebar-border: #333d20;
+  --sidebar-ring: #8c9e57;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading tracking-tight;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-olive-500);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-olive-200);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-olive-600;
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .section-y {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+  .topo-bg {
+    background-image: url("/topo.svg");
+    background-size: 640px;
+  }
+}
+
+/* Leaflet polish */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--color-sand-100);
+  z-index: 0;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-lift);
+  padding: 0;
+  overflow: hidden;
+}
+.leaflet-popup-content {
+  margin: 0;
+  width: 240px !important;
+}
+.sitrep-pin {
+  background: transparent;
+  border: 0;
+}
+.sitrep-pin svg {
+  filter: drop-shadow(0 2px 3px rgb(22 27 14 / 0.35));
+  transition: transform 0.15s ease;
+  transform-origin: 50% 100%;
+}
+.sitrep-pin.active svg,
+.sitrep-pin:hover svg {
+  transform: scale(1.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Warm the OSM tiles slightly so the map sits inside the brand palette */
+.leaflet-tile-pane {
+  filter: saturate(0.75) sepia(0.18) hue-rotate(-8deg);
 }
