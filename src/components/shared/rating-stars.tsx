@@ -7,15 +7,17 @@ interface RatingStarsProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   showDemoLabel?: boolean;
+  /** Accessible name prefix, e.g. "Website rating". Defaults to "Demo rating". */
+  label?: string;
 }
 
-export function RatingStars({ rating, reviewCount, size = "sm", className, showDemoLabel }: RatingStarsProps) {
+export function RatingStars({ rating, reviewCount, size = "sm", className, showDemoLabel, label = "Demo rating" }: RatingStarsProps) {
   const px = size === "lg" ? "size-5" : size === "md" ? "size-4" : "size-3.5";
   return (
     <div
       className={cn("flex flex-wrap items-center gap-x-1.5 gap-y-0.5", className)}
       role="img"
-      aria-label={`Demo rating: ${rating.toFixed(1)} out of 5${reviewCount !== undefined ? ` from ${reviewCount} sample reviews` : ""}`}
+      aria-label={`${label}: ${rating.toFixed(1)} out of 5${reviewCount !== undefined ? ` from ${reviewCount} sample reviews` : ""}`}
     >
       <div className="flex" aria-hidden>
         {[1, 2, 3, 4, 5].map((i) => {

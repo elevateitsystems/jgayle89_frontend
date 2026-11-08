@@ -11,6 +11,7 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build && npm start   # production check
 npm run lint
+npm test           # node:test unit + data-integrity tests (no extra dependencies)
 ```
 
 Requires Node 20+.
@@ -30,7 +31,8 @@ Requires Node 20+.
 | `/directory` Search, filters, grid/list/map | `/admin/businesses` Table, search, status, delete |
 | `/directory/[slug]` Business details | `/admin/businesses/new` · `/admin/businesses/[id]/edit` |
 | `/events` · `/events/[slug]` | `/admin/events` Table + slide-over form |
-| `/login` · `/register` | `/admin/import` CSV import |
+| `/benefits` · `/benefits/[slug]` Veteran benefits search | `/admin/import` CSV import |
+| `/login` · `/register` | `/admin/settings` Site settings (Google ratings toggle) |
 
 ## Structure
 
@@ -64,3 +66,18 @@ for your fetching layer (SWR / React Query). Zod schemas can be reused for reque
 ## Credits
 
 Photography via Unsplash (free license), self-hosted in `public/images`. Map tiles © OpenStreetMap contributors.
+
+## Ratings (demo)
+
+Each business profile shows two separate ratings: the **website rating** (`Business.rating` / `reviewCount`, plus
+sample reviews in `src/data/reviews.ts`) and a **Google rating**. Google values are static mock data
+(`src/data/google-ratings.ts`) served through `GoogleRatingProvider` in `src/services/google-rating-service.ts` — swap
+that provider for a Places API-backed one (server-side route, server-only API key) to go live. Admins can hide the
+Google rating from `/admin/settings`.
+
+## Veteran benefits
+
+`/benefits` searches `src/data/benefits.ts` by keyword, state (all 50 states + DC supported in `src/data/us-states.ts`)
+and category. Federal programs (`state: null`) appear for every state. Every record is `dataStatus: "demo"` — links go to
+official sources but the summaries are **not yet reviewed against them**; the UI labels them "Sample summary". Only set
+`"verified"` (with `lastVerified`) after a person has checked the record against `sourceUrl`.
