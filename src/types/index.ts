@@ -46,6 +46,31 @@ export interface Business {
   featured: boolean;
   status: ListingStatus;
   createdAt: string; // ISO date
+  /** Reserved for the future Google Places integration; unused by the mock provider. */
+  googlePlaceId?: string;
+}
+
+/** A review left on the Mission: SITREP platform itself (not Google). */
+export interface Review {
+  id: string;
+  businessId: string; // Business.id
+  author: string;
+  rating: number; // 1-5
+  title: string;
+  body: string;
+  createdAt: string; // ISO date
+}
+
+/** Aggregate Google rating for a business. `source` tells the UI whether it is real. */
+export interface GoogleRatingSummary {
+  rating: number; // 0-5
+  reviewCount: number;
+  source: "mock" | "google-places";
+}
+
+/** Platform-wide settings editable from the admin area. */
+export interface SiteSettings {
+  showGoogleRatings: boolean;
 }
 
 export interface CommunityEvent {
@@ -99,4 +124,48 @@ export interface DemoSession {
   name: string;
   email: string;
   role: "admin" | "member";
+}
+
+export type BenefitCategory =
+  | "education"
+  | "healthcare"
+  | "housing"
+  | "employment"
+  | "disability"
+  | "tax"
+  | "financial";
+
+export type BenefitScope = "federal" | "state";
+
+/**
+ * A veteran assistance program. Federal programs have `state: null` and appear
+ * for every state; state programs carry a 2-letter USPS code.
+ */
+export interface Benefit {
+  id: string;
+  slug: string;
+  title: string;
+  category: BenefitCategory;
+  scope: BenefitScope;
+  state: string | null;
+  agency: string;
+  summary: string;
+  description: string;
+  eligibility: string[];
+  howToApply: string[];
+  sourceUrl: string; // official program page
+  applyUrl?: string; // official application page, when distinct
+  tags: string[];
+  /**
+   * "demo" = summary written for the prototype and NOT yet reviewed against the
+   * official source; the UI labels it as such. Flip to "verified" (and set
+   * `lastVerified`) only after a person has checked the record.
+   */
+  dataStatus: "demo" | "verified";
+  lastVerified?: string; // ISO date
+}
+
+export interface UsState {
+  code: string; // USPS 2-letter
+  name: string;
 }

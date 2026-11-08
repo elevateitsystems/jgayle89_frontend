@@ -7,6 +7,7 @@ import { siteConfig } from "@/config/site";
 const explore = [
   { label: "Business directory", href: "/directory" },
   { label: "Upcoming events", href: "/events" },
+  { label: "Veteran benefits", href: "/benefits" },
   { label: "About the mission", href: "/#mission" },
   { label: "Join the community", href: "/register" },
 ];

@@ -22,16 +22,24 @@ import { BusinessAvatar } from "@/components/shared/monogram";
 import { DemoNotice } from "@/components/shared/demo-notice";
 import { EmptyState } from "@/components/shared/empty-state";
 import { MapView } from "@/components/shared/map-view";
-import { RatingStars } from "@/components/shared/rating-stars";
+import { RatingPills } from "@/components/ratings/rating-pills";
+import { RatingsSection } from "@/components/ratings/ratings-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
 import { categoryById } from "@/data/categories";
 import { useBusiness, usePublicBusinesses } from "@/hooks/use-businesses";
+import { useGoogleRating } from "@/hooks/use-google-rating";
+import { useBusinessReviews } from "@/hooks/use-reviews";
+import { useSiteSettings } from "@/hooks/use-settings";
+import { shouldShowGoogleRating } from "@/lib/ratings";
 import { cn } from "@/lib/utils";
 
 export function BusinessDetail({ slug }: { slug: string }) {
   const { business: b, loading } = useBusiness({ slug });
   const { businesses } = usePublicBusinesses();
+  const settings = useSiteSettings();
+  const reviews = useBusinessReviews(b?.id);
+  const { google, loading: googleLoading } = useGoogleRating(b);
 
   const related = useMemo(() => {
     if (!b) return [];
@@ -103,8 +111,10 @@ export function BusinessDetail({ slug }: { slug: string }) {
               </nav>
               <h1 className="mt-2 text-3xl font-semibold leading-tight text-olive-950 sm:text-4xl">{b.name}</h1>
               <p className="mt-1.5 text-base text-muted-foreground">{b.tagline}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                <RatingStars rating={b.rating} reviewCount={b.reviewCount} size="md" showDemoLabel />
+              <div className="mt-4">
+                <RatingPills business={b} google={shouldShowGoogleRating(settings, google) ? google : null} />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <MapPin className="size-4 text-olive-600" aria-hidden /> {b.city}, {b.state}
                 </span>
@@ -152,6 +162,14 @@ export function BusinessDetail({ slug }: { slug: string }) {
                 </ul>
               </section>
             )}
+
+            <RatingsSection
+              business={b}
+              reviews={reviews}
+              google={google}
+              googleLoading={googleLoading}
+              googleEnabled={settings.showGoogleRatings}
+            />
 
             <section aria-labelledby="loc-h">
               <h2 id="loc-h" className="text-2xl font-semibold text-olive-950">Location</h2>

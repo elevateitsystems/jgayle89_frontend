@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Settings,
   Store,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const nav: { label: string; href: string; icon: LucideIcon; exact?: boolean }[] 
   { label: "Businesses", href: "/admin/businesses", icon: Store },
   { label: "Events", href: "/admin/events", icon: CalendarDays },
   { label: "CSV Import", href: "/admin/import", icon: FileUp },
+  { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 function titleFor(pathname: string) {
@@ -33,6 +35,7 @@ function titleFor(pathname: string) {
   if (pathname.startsWith("/admin/businesses")) return "Businesses";
   if (pathname.startsWith("/admin/events")) return "Events";
   if (pathname.startsWith("/admin/import")) return "CSV Import";
+  if (pathname.startsWith("/admin/settings")) return "Settings";
   return "Dashboard";
 }
 
