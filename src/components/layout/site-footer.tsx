@@ -1,24 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
+import { useSession } from "@/hooks/use-session";
+import { isBackOffice } from "@/lib/permissions";
 import { siteConfig } from "@/config/site";
 
 const explore = [
   { label: "Business directory", href: "/directory" },
   { label: "Upcoming events", href: "/events" },
-  { label: "Veteran benefits", href: "/benefits" },
   { label: "About the mission", href: "/#mission" },
   { label: "Join the community", href: "/register" },
 ];
 
-const account = [
+const guestAccount = [
   { label: "Sign in", href: "/login" },
   { label: "Create an account", href: "/register" },
-  { label: "Admin dashboard (demo)", href: "/admin" },
 ];
 
 export function SiteFooter() {
+  const { categories } = useCategories();
+  const session = useSession();
+  const account = session
+    ? [{ label: "My profile", href: "/account" }, ...(isBackOffice(session) ? [{ label: "Dashboard", href: "/admin" }] : [])]
+    : guestAccount;
   return (
     <footer className="relative mt-auto overflow-hidden bg-olive-950 text-olive-100">
       <div className="topo-bg pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden />

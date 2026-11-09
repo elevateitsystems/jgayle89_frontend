@@ -1,4 +1,3 @@
-import { categoryById } from "@/data/categories";
 import type { Business, CommunityEvent } from "@/types";
 
 export interface BusinessFilters {
@@ -21,7 +20,12 @@ export const defaultFilters: BusinessFilters = {
 
 const norm = (s: string) => s.toLowerCase().trim();
 
-export function filterBusinesses(list: Business[], f: BusinessFilters): Business[] {
+export function filterBusinesses(
+  list: Business[],
+  f: BusinessFilters,
+  /** Resolves a category id to its display name so keyword search matches category names. */
+  categoryName: (id: string) => string = () => "",
+): Business[] {
   const q = norm(f.q);
   const loc = norm(f.location);
   const out = list.filter((b) => {
@@ -34,7 +38,7 @@ export function filterBusinesses(list: Business[], f: BusinessFilters): Business
     }
     if (q) {
       const hay = norm(
-        [b.name, b.tagline, b.description, b.services.join(" "), b.keywords.join(" "), categoryById(b.category)?.name ?? ""].join(" "),
+        [b.name, b.tagline, b.description, b.services.join(" "), b.keywords.join(" "), categoryName(b.category)].join(" "),
       );
       if (!q.split(/\s+/).every((t) => hay.includes(t))) return false;
     }

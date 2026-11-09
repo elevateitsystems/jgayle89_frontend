@@ -9,6 +9,7 @@ import { Loader2, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUpload } from "./image-upload";
 import { PageHeader } from "./page-header";
+import Image from "next/image";
 import { BusinessCard } from "@/components/directory/business-card";
 import { MapView } from "@/components/shared/map-view";
 import { BusinessAvatar } from "@/components/shared/monogram";
@@ -18,7 +19,9 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
+import { useSession } from "@/hooks/use-session";
+import { hasPermission } from "@/lib/permissions";
 import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { businessSchema, type BusinessFormOutput, type BusinessFormValues } from "@/schemas/business";
@@ -29,12 +32,15 @@ const branches = ["Army", "Navy", "Marine Corps", "Air Force", "Space Force", "C
 
 const csv = (s: string) => s.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
 
-function toFormValues(b?: Business): BusinessFormValues {
+/** Cover used for new listings created by someone without the photo-upload permission. */
+const PLACEHOLDER_COVER = "/images/handshake.jpg";
+
+function toFormValues(b?: Business, canUploadPhotos = true): BusinessFormValues {
   if (!b) {
     return {
       name: "", slug: "", category: "" as never, tagline: "", description: "", services: "", keywords: "",
       address: "", city: "", state: "", zip: "", lat: 39.5, lng: -98.35, phone: "", email: "", website: "",
-      rating: 0, reviewCount: 0, branch: "Army", yearFounded: 2020, hours: "", coverImage: "", profileImage: "",
+      rating: 0, reviewCount: 0, branch: "Army", yearFounded: 2020, hours: "", coverImage: canUploadPhotos ? "" : PLACEHOLDER_COVER, profileImage: "",
       featured: false, status: "pending",
     };
   }
@@ -48,6 +54,8 @@ function toFormValues(b?: Business): BusinessFormValues {
 
 export function BusinessForm({ business }: { business?: Business }) {
   const router = useRouter();
+  const { categories } = useCategories();
+  const canUploadPhotos = hasPermission(useSession(), "photos.upload");
   const editing = !!business;
   const [slugTouched, setSlugTouched] = useState(editing);
 
@@ -59,7 +67,7 @@ export function BusinessForm({ business }: { business?: Business }) {
     formState: { errors, isSubmitting },
   } = useForm<BusinessFormValues, unknown, BusinessFormOutput>({
     resolver: zodResolver(businessSchema),
-    defaultValues: toFormValues(business),
+    defaultValues: toFormValues(business, canUploadPhotos),
   });
 
   const v = useWatch({ control });
@@ -273,23 +281,37 @@ export function BusinessForm({ business }: { business?: Business }) {
             </div>
           </Section>
 
-          <Section title="Images" description="Upload files (resized in your browser) or pick a sample image.">
-            <div className="grid gap-6 sm:grid-cols-[1fr_200px]">
-              <Controller
-                control={control}
-                name="coverImage"
-                render={({ field }) => (
-                  <ImageUpload id="coverImage" label="Cover image *" value={field.value} onChange={field.onChange} error={err("coverImage")} hint="Recommended 1600×900" />
-                )}
-              />
-              <Controller
-                control={control}
-                name="profileImage"
-                render={({ field }) => (
-                  <ImageUpload id="profileImage" label="Profile image" aspect="square" value={field.value} onChange={field.onChange} hint="Optional — monogram if empty" />
-                )}
-              />
-            </div>
+          <Section
+            title="Images"
+            description={canUploadPhotos ? "Upload files (resized in your browser) or pick a sample image." : "Photo uploads need the “Upload business photos” permission."}
+          >
+            {canUploadPhotos ? (
+              <div className="grid gap-6 sm:grid-cols-[1fr_200px]">
+                <Controller
+                  control={control}
+                  name="coverImage"
+                  render={({ field }) => (
+                    <ImageUpload id="coverImage" label="Cover image *" value={field.value} onChange={field.onChange} error={err("coverImage")} hint="Recommended 1600×900" />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="profileImage"
+                  render={({ field }) => (
+                    <ImageUpload id="profileImage" label="Profile image" aspect="square" value={field.value} onChange={field.onChange} hint="Optional — monogram if empty" />
+                  )}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <span className="relative block aspect-video w-48 overflow-hidden rounded-md bg-sand-200">
+                  <Image src={v.coverImage || PLACEHOLDER_COVER} alt="Current cover" fill sizes="192px" className="object-cover" unoptimized={(v.coverImage ?? "").startsWith("data:")} />
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  {editing ? "The current photos stay as they are." : "A placeholder cover is used until someone with photo permission uploads one."} Ask an administrator if you need to upload photos.
+                </p>
+              </div>
+            )}
           </Section>
         </div>
 

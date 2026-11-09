@@ -23,16 +23,45 @@ Requires Node 20+.
 - `src/app/icon.png`, `src/app/apple-icon.png` — favicons cropped from the logo's crosshair-pin emblem.
 - Palette tokens live in `src/app/globals.css` (olive + sand scales).
 
+## Access model (frontend only)
+
+Four access groups, defined in `src/lib/permissions.ts` (one source of truth for nav **and** route guards):
+
+| Group | What they get |
+| --- | --- |
+| **Guest** | Public browsing only: home, directory (search, filters, map/list), business profiles, events, login/register. Admin routes show "Sign in required". |
+| **Registered user** | Same public site plus `/account` (profile). Two *types* — **Veteran / Military** (with branch) and **Civilian** — are profile attributes, **not** roles. `/admin` is denied. |
+| **Staff** | Dashboard, plus only the sections their assigned permissions allow: `businesses.manage`, `photos.upload`, `csv.import`, `events.manage`. |
+| **Admin** | Everything, plus admin-only sections: Categories, Users, Staff & permissions, Settings. |
+
+Resources / Appointments / Orders permissions are intentionally **not defined yet** (later phases) — add them to
+`PHASE1_PERMISSIONS` when those phases ship. Later-phase features that already exist in the code are switched off in
+`siteConfig.features` (currently the veteran benefits directory: its routes 404 and it is not linked anywhere).
+
+> **Not a security boundary.** Hiding links and showing "access denied" screens is UX only — anything in the browser can
+> be bypassed. The backend must authenticate every request and enforce role + permission checks itself.
+
+### Demo accounts
+
+The sign-in page has one-click buttons; the password is not checked (8+ chars required).
+
+| Email | Access |
+| --- | --- |
+| `admin@sitrep.demo` | Admin |
+| `staff@sitrep.demo` | Staff — all four permissions |
+| `veteran@sitrep.demo` / `civilian@sitrep.demo` | Registered users |
+
+Unknown emails are rejected; new accounts come from `/register`. "Reset demo data" is simply clearing localStorage for the site.
+
 ## Routes
 
-| Public | Admin (demo, unguarded) |
-| --- | --- |
-| `/` Home | `/admin` Dashboard |
-| `/directory` Search, filters, grid/list/map | `/admin/businesses` Table, search, status, delete |
-| `/directory/[slug]` Business details | `/admin/businesses/new` · `/admin/businesses/[id]/edit` |
-| `/events` · `/events/[slug]` | `/admin/events` Table + slide-over form |
-| `/benefits` · `/benefits/[slug]` Veteran benefits search | `/admin/import` CSV import |
-| `/login` · `/register` | `/admin/settings` Site settings (Google ratings toggle) |
+| Public | Members | Admin / Staff (permission-based) |
+| --- | --- | --- |
+| `/` Home | `/account` Profile | `/admin` Dashboard |
+| `/directory` Search, filters, grid/list/map | | `/admin/businesses` · `/new` · `/[id]/edit` |
+| `/directory/[slug]` Business profile | | `/admin/photos` Photo upload |
+| `/events` · `/events/[slug]` | | `/admin/events` · `/admin/import` (CSV) |
+| `/login` · `/register` | | Admin only: `/admin/categories` · `/admin/users` · `/admin/staff` · `/admin/settings` |
 
 ## Structure
 
@@ -58,7 +87,7 @@ for your fetching layer (SWR / React Query). Zod schemas can be reused for reque
 
 ## Demo-only behaviours
 
-- Sign-in accepts any valid email + 8-char password (`fail@…` shows the error state; `taken@…` on register).
+- Sign-in needs a known demo account (or one you registered) + an 8-char password; the password isn't verified. `fail@…` shows the error state.
 - Event registration, forgot-password and CSV import act on local state only.
 - To restore the original samples, clear this site's localStorage (keys starting with `sitrep:`) and reload.
 - Ratings/reviews are labelled as demo data throughout.
@@ -77,7 +106,7 @@ Google rating from `/admin/settings`.
 
 ## Veteran benefits
 
-`/benefits` searches `src/data/benefits.ts` by keyword, state (all 50 states + DC supported in `src/data/us-states.ts`)
+(Currently disabled — `siteConfig.features.benefits` is `false`; not part of Phase 1.) `/benefits` searches `src/data/benefits.ts` by keyword, state (all 50 states + DC supported in `src/data/us-states.ts`)
 and category. Federal programs (`state: null`) appear for every state. Every record is `dataStatus: "demo"` — links go to
 official sources but the summaries are **not yet reviewed against them**; the UI labels them "Sample summary". Only set
 `"verified"` (with `lastVerified`) after a person has checked the record against `sourceUrl`.

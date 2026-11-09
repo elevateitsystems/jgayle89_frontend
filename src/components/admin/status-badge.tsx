@@ -5,6 +5,7 @@ const styles: Record<string, string> = {
   published: "bg-olive-100 text-olive-800 ring-olive-300",
   pending: "bg-brass-soft text-sand-700 ring-brass/40",
   draft: "bg-sand-200 text-sand-700 ring-sand-300",
+  suspended: "bg-destructive/10 text-destructive ring-destructive/30",
 };
 
 export function StatusBadge({ status }: { status: string }) {

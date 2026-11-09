@@ -25,3 +25,8 @@ const loadedAt = typeof window !== "undefined" ? Date.now() : null;
 export function useClientNow(): number | null {
   return useSyncExternalStore(noopSubscribe, () => loadedAt, () => null);
 }
+
+/** True once running in the browser after hydration (false during SSR and the hydration pass). */
+export function useHydrated(): boolean {
+  return useClientNow() !== null;
+}

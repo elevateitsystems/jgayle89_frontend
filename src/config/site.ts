@@ -1,3 +1,8 @@
+const features = {
+  /** Veteran benefits directory — a later-phase feature, not part of Phase 1. */
+  benefits: false as boolean,
+};
+
 export const siteConfig = {
   name: "Mission: SITREP",
   shortName: "SITREP",
@@ -19,10 +24,15 @@ export const siteConfig = {
     { label: "Instagram", href: "#" },
     { label: "LinkedIn", href: "#" },
   ],
+  /**
+   * Phase gates. Features for later phases stay in the codebase but are OFF:
+   * their routes 404 and they are not linked from navigation.
+   */
+  features,
   nav: [
     { label: "Directory", href: "/directory" },
     { label: "Events", href: "/events" },
-    { label: "Veteran Benefits", href: "/benefits" },
+    ...(features.benefits ? [{ label: "Veteran Benefits", href: "/benefits" }] : []),
     { label: "About", href: "/#mission" },
   ],
 } as const;

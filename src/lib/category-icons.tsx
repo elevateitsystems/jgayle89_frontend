@@ -26,6 +26,8 @@ const map: Record<string, LucideIcon> = {
   scissors: Scissors,
 };
 
+export const categoryIconKeys = Object.keys(map);
+
 export function CategoryIcon({ name, className }: { name: string; className?: string }) {
   const Icon = map[name] ?? Store;
   return <Icon className={className} aria-hidden />;

@@ -1,8 +1,6 @@
 import { z } from "zod";
-import { categories } from "@/data/categories";
 
 const branches = ["Army", "Navy", "Marine Corps", "Air Force", "Space Force", "Coast Guard", "National Guard"] as const;
-const categoryIds = categories.map((c) => c.id) as [string, ...string[]];
 
 const optionalUrl = z
   .string()
@@ -16,7 +14,7 @@ export const businessSchema = z.object({
     .trim()
     .max(80)
     .refine((v) => v === "" || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v), "Use lowercase letters, numbers and hyphens only"),
-  category: z.enum(categoryIds, { error: "Choose a category" }),
+  category: z.string().min(1, "Choose a category"),
   tagline: z.string().trim().min(5, "Add a short tagline").max(120, "Keep the tagline under 120 characters"),
   description: z.string().trim().min(40, "Description should be at least 40 characters").max(2000),
   services: z.string().trim().max(400),

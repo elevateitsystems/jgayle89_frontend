@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { MapPin, Search, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
 import { cn } from "@/lib/utils";
 
 export function DirectorySearch({ className }: { className?: string }) {
   const router = useRouter();
+  const { categories } = useCategories();
   const [q, setQ] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");

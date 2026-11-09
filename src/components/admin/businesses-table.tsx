@@ -32,7 +32,7 @@ import {
 import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { categories, categoryById } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
 import { useBusinesses } from "@/hooks/use-businesses";
 import { formatDate } from "@/lib/date";
 import { businessService } from "@/services/business-service";
@@ -43,6 +43,7 @@ const PAGE_SIZE = 8;
 export function BusinessesTable() {
   const router = useRouter();
   const { businesses, loading } = useBusinesses();
+  const { categories, categoryName } = useCategories();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
@@ -167,7 +168,7 @@ export function BusinessesTable() {
                       </span>
                     </Link>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{categoryById(b.category)?.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">{categoryName(b.category)}</TableCell>
                   <TableCell><StatusBadge status={b.status} /></TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <span className="inline-flex items-center gap-1 tabular-nums">

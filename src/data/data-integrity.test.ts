@@ -6,6 +6,8 @@ import { businesses } from "./businesses.ts";
 import { mockGoogleRatings } from "./google-ratings.ts";
 import { reviews } from "./reviews.ts";
 import { US_STATES } from "./us-states.ts";
+import { demoAccounts, users } from "./users.ts";
+import { ALL_PERMISSION_IDS } from "../lib/permissions.ts";
 
 describe("US states", () => {
   it("covers all 50 states plus DC with unique codes", () => {
@@ -76,5 +78,38 @@ describe("rating demo data", () => {
 
   it("keeps at least one business without Google data to exercise the empty state", () => {
     assert.ok(businesses.some((b) => !(b.slug in mockGoogleRatings)));
+  });
+});
+
+describe("demo users", () => {
+  it("has unique ids and case-insensitive unique emails", () => {
+    assert.equal(new Set(users.map((u) => u.id)).size, users.length);
+    assert.equal(new Set(users.map((u) => u.email.toLowerCase())).size, users.length);
+  });
+
+  it("only gives staff permissions to staff, and only Phase 1 permissions", () => {
+    for (const u of users) {
+      if (u.role !== "staff") assert.deepEqual(u.permissions, [], u.email);
+      for (const p of u.permissions) assert.ok((ALL_PERMISSION_IDS as string[]).includes(p), `${u.email}: ${p}`);
+    }
+  });
+
+  it("covers every access group, with both veteran and civilian members", () => {
+    assert.ok(users.some((u) => u.role === "admin"));
+    assert.ok(users.some((u) => u.role === "staff"));
+    assert.ok(users.some((u) => u.role === "user" && u.userType === "veteran"));
+    assert.ok(users.some((u) => u.role === "user" && u.userType === "civilian"));
+    assert.ok(users.some((u) => u.status === "suspended"));
+  });
+
+  it("only attaches a branch to veterans", () => {
+    for (const u of users) if (u.branch) assert.equal(u.userType, "veteran", u.email);
+  });
+
+  it("advertises only accounts that exist and are active", () => {
+    for (const a of demoAccounts) {
+      const u = users.find((x) => x.email === a.email);
+      assert.ok(u && u.status === "active", a.email);
+    }
   });
 });
