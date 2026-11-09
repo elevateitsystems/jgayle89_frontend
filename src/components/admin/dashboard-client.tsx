@@ -9,6 +9,7 @@ import {
   CalendarDays,
   FileUp,
   Eye,
+  Images,
   Plus,
   Store,
   UserPlus,
@@ -21,12 +22,16 @@ import { StatusBadge } from "./status-badge";
 import { DateBadge } from "@/components/events/event-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { categoryById } from "@/data/categories";
 import { dashboardStats, listingsGrowth, recentActivity, visitorsTrend } from "@/data/dashboard";
 import { useBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 import { useEvents } from "@/hooks/use-events";
+import { useSession } from "@/hooks/use-session";
+import { useStore } from "@/hooks/use-store";
 import { useClientNow } from "@/hooks/use-store";
 import { isUpcoming, timeAgo } from "@/lib/date";
+import { ROLE_LABEL, hasPermission, isAdmin } from "@/lib/permissions";
+import { userStore } from "@/services/user-service";
 import { cn } from "@/lib/utils";
 
 const activityIcon: Record<string, LucideIcon> = {
@@ -40,6 +45,22 @@ const activityIcon: Record<string, LucideIcon> = {
 export function DashboardClient() {
   const { businesses, loading } = useBusinesses();
   const { events } = useEvents();
+  const { categoryById } = useCategories();
+  const user = useSession();
+  const users = useStore(userStore);
+  const canBusinesses = hasPermission(user, "businesses.manage");
+  const canPhotos = hasPermission(user, "photos.upload");
+  const canImport = hasPermission(user, "csv.import");
+  const canEvents = hasPermission(user, "events.manage");
+  const team = useMemo(
+    () => ({
+      staff: users.filter((u) => u.role === "staff").length,
+      members: users.filter((u) => u.role === "user").length,
+      veterans: users.filter((u) => u.role === "user" && u.userType === "veteran").length,
+      civilians: users.filter((u) => u.role === "user" && u.userType === "civilian").length,
+    }),
+    [users],
+  );
 
   const upcoming = useMemo(
     () => events.filter((e) => e.status === "published" && isUpcoming(e.date)).sort((a, b) => a.date.localeCompare(b.date)),
@@ -57,7 +78,7 @@ export function DashboardClient() {
       .map(([id, value]) => ({ label: categoryById(id)?.name ?? id, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-  }, [businesses]);
+  }, [businesses, categoryById]);
 
   const stats = dashboardStats.map((s) =>
     s.id === "listings" ? { ...s, value: businesses.length, hint: `${businesses.filter((b) => b.status === "active").length} active` }
@@ -69,15 +90,29 @@ export function DashboardClient() {
     <>
       <PageHeader
         title="Overview"
-        description="A snapshot of listings, events and community activity. Figures marked demo are sample data."
+        description={`Signed in as ${user ? ROLE_LABEL[user.role] : ""}. A snapshot of listings, events and community activity — figures marked demo are sample data.`}
         actions={
           <>
-            <Link href="/admin/import" className={buttonVariants({ variant: "outline" })}>
-              <FileUp /> Import CSV
-            </Link>
-            <Link href="/admin/businesses/new" className={buttonVariants()}>
-              <Plus /> Add business
-            </Link>
+            {canImport && (
+              <Link href="/admin/import" className={buttonVariants({ variant: "outline" })}>
+                <FileUp /> Import CSV
+              </Link>
+            )}
+            {canPhotos && (
+              <Link href="/admin/photos" className={buttonVariants({ variant: "outline" })}>
+                <Images /> Upload photos
+              </Link>
+            )}
+            {canEvents && (
+              <Link href="/admin/events" className={buttonVariants({ variant: canBusinesses ? "outline" : "default" })}>
+                <CalendarDays /> Manage events
+              </Link>
+            )}
+            {canBusinesses && (
+              <Link href="/admin/businesses/new" className={buttonVariants()}>
+                <Plus /> Add business
+              </Link>
+            )}
           </>
         }
       />
@@ -120,10 +155,15 @@ export function DashboardClient() {
       </section>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-3">
+        {(canBusinesses || canPhotos) && (
         <Panel
           title="Recent business listings"
           className="xl:col-span-2"
-          action={<Link href="/admin/businesses" className="text-sm font-semibold text-olive-700 hover:underline">View all</Link>}
+          action={
+            <Link href={canBusinesses ? "/admin/businesses" : "/admin/photos"} className="text-sm font-semibold text-olive-700 hover:underline">
+              {canBusinesses ? "View all" : "Manage photos"}
+            </Link>
+          }
         >
           <ul className="-mx-2 divide-y divide-sand-200">
             {recent.map((b) => (
@@ -138,14 +178,18 @@ export function DashboardClient() {
                   </p>
                 </div>
                 <StatusBadge status={b.status} />
-                <Link href={`/admin/businesses/${b.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden sm:inline-flex")}>
-                  Edit
-                </Link>
+                {canBusinesses && (
+                  <Link href={`/admin/businesses/${b.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "hidden sm:inline-flex")}>
+                    Edit
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
         </Panel>
+        )}
 
+        {canEvents && (
         <Panel
           title="Upcoming events"
           action={<Link href="/admin/events" className="text-sm font-semibold text-olive-700 hover:underline">Manage</Link>}
@@ -166,7 +210,32 @@ export function DashboardClient() {
             </ul>
           )}
         </Panel>
+        )}
       </section>
+
+      {isAdmin(user) && (
+        <section className="mt-6" aria-label="Community and team">
+          <Panel
+            title="Community & team"
+            subtitle="Live from your data"
+            action={<Link href="/admin/users" className="text-sm font-semibold text-olive-700 hover:underline">Manage users</Link>}
+          >
+            <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[
+                ["Registered users", team.members],
+                ["Veteran / Military", team.veterans],
+                ["Civilian", team.civilians],
+                ["Staff", team.staff],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="mt-1 font-heading text-3xl font-semibold tabular-nums text-olive-950">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </Panel>
+        </section>
+      )}
 
       <section className="mt-6">
         <Panel title="Recent activity" subtitle="Sample activity feed">

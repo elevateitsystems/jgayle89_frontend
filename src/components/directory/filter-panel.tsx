@@ -3,7 +3,7 @@
 import { Star } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
 import { cn } from "@/lib/utils";
 import type { BusinessFilters } from "@/lib/business-filters";
 import type { BranchOfService } from "@/types";
@@ -19,6 +19,7 @@ interface Props {
 }
 
 export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }: Props) {
+  const { categories } = useCategories();
   return (
     <div className="space-y-7">
       <fieldset>

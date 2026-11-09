@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { categories } from "@/data/categories";
 import type { BusinessInput } from "@/services/business-service";
-import type { BranchOfService } from "@/types";
+import type { BranchOfService, Category } from "@/types";
 
 /** RFC 4180-style CSV parser: quoted fields, escaped quotes, CRLF, BOM. */
 export function parseCSV(text: string): string[][] {
@@ -83,12 +82,12 @@ export interface CsvAnalysis {
   warningCount: number;
 }
 
-function matchCategory(input: string) {
+function matchCategory(categories: Category[], input: string) {
   const s = input.trim().toLowerCase();
   return categories.find((c) => c.id === s || c.name.toLowerCase() === s || c.name.toLowerCase().replace(/&/g, "and") === s);
 }
 
-export function analyzeCSV(text: string, existingNames: string[]): CsvAnalysis {
+export function analyzeCSV(text: string, existingNames: string[], categories: Category[]): CsvAnalysis {
   const table = parseCSV(text);
   const headers = (table[0] ?? []).map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
   const missingColumns = REQUIRED_COLUMNS.filter((c) => !headers.includes(c));
@@ -107,7 +106,7 @@ export function analyzeCSV(text: string, existingNames: string[]): CsvAnalysis {
       const parsed = rowSchema.safeParse({ ...Object.fromEntries(CSV_COLUMNS.map((c) => [c, ""])), ...raw });
       if (!parsed.success) parsed.error.issues.forEach((i) => errors.push(i.message));
 
-      const cat = matchCategory(raw.category ?? "");
+      const cat = matchCategory(categories, raw.category ?? "");
       if (raw.category && !cat) errors.push(`Unknown category "${raw.category}"`);
 
       const key = (raw.name ?? "").toLowerCase();

@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { categories } from "@/data/categories";
 import { CategoryIcon } from "@/lib/category-icons";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { usePublicBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 
 export function CategoriesGrid() {
   const { businesses } = usePublicBusinesses();
+  const { categories } = useCategories();
   const counts = businesses.reduce<Record<string, number>>((acc, b) => {
     acc[b.category] = (acc[b.category] ?? 0) + 1;
     return acc;

@@ -27,8 +27,8 @@ export function MissionSection() {
         <div className="relative">
           <div className="relative aspect-[5/4] overflow-hidden rounded-lg shadow-lift">
             <Image
-              src="/images/team-laptop.jpg"
-              alt="A small team of professionals collaborating around a laptop"
+              src="/images/navy-flag-detail.jpg"
+              alt="U.S. Navy sailors in dress whites holding an American flag during a ceremony"
               fill
               sizes="(min-width: 1024px) 560px, 100vw"
               className="object-cover"

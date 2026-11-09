@@ -1,7 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
-import { categoryById } from "@/data/categories";
+import { useCategories } from "@/hooks/use-categories";
 import { RatingStars } from "@/components/shared/rating-stars";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -16,6 +18,7 @@ interface Props {
 }
 
 export function BusinessCard({ business: b, variant = "grid", active, priority, onHover }: Props) {
+  const { categoryById } = useCategories();
   const category = categoryById(b.category);
   const list = variant === "list";
 

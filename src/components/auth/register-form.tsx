@@ -8,16 +8,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PasswordInput } from "./password-input";
+import { UserTypeFields } from "./user-type-fields";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
-import { registerSchema, type RegisterValues } from "@/schemas/auth";
+import { BRANCHES, registerSchema, type RegisterValues } from "@/schemas/auth";
 import { authService } from "@/services/auth-service";
-
-const affiliations = ["Army", "Navy", "Marine Corps", "Air Force", "Space Force", "Coast Guard", "National Guard", "Military family", "Supporter"];
 
 function strength(pw: string) {
   let s = 0;
@@ -38,7 +36,7 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", branch: "", password: "", confirm: "", terms: false },
+    defaultValues: { name: "", email: "", userType: undefined, branch: "", password: "", confirm: "", terms: false },
   });
   const pw = useWatch({ control, name: "password" }) ?? "";
   const score = strength(pw);
@@ -47,8 +45,13 @@ export function RegisterForm() {
   async function onSubmit(v: RegisterValues) {
     setFormError(null);
     try {
-      const session = await authService.register(v.name, v.email, v.password);
-      toast.success(`Welcome to the community, ${session.name.split(" ")[0]}!`, { description: "Your demo account is ready." });
+      const user = await authService.register({
+        name: v.name,
+        email: v.email,
+        userType: v.userType,
+        branch: v.userType === "veteran" ? (v.branch as (typeof BRANCHES)[number]) : undefined,
+      });
+      toast.success(`Welcome to the community, ${user.name.split(" ")[0]}!`, { description: "Your demo account is ready." });
       router.push("/directory");
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong.";
@@ -68,21 +71,11 @@ export function RegisterForm() {
         <Input id="name" autoComplete="name" placeholder="Alex Morgan" aria-invalid={!!errors.name} aria-describedby={describedBy("name", errors.name?.message)} {...register("name")} />
       </FormField>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <FormField label="Email" htmlFor="reg-email" error={errors.email?.message} required>
-          <Input id="reg-email" type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={!!errors.email} aria-describedby={describedBy("reg-email", errors.email?.message)} {...register("email")} />
-        </FormField>
-        <FormField label="Affiliation" htmlFor="branch" error={errors.branch?.message} required>
-          <NativeSelect id="branch" aria-invalid={!!errors.branch} aria-describedby={describedBy("branch", errors.branch?.message)} {...register("branch")}>
-            <option value="">Select…</option>
-            {affiliations.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </NativeSelect>
-        </FormField>
-      </div>
+      <FormField label="Email" htmlFor="reg-email" error={errors.email?.message} required>
+        <Input id="reg-email" type="email" autoComplete="email" placeholder="you@example.com" aria-invalid={!!errors.email} aria-describedby={describedBy("reg-email", errors.email?.message)} {...register("email")} />
+      </FormField>
+
+      <UserTypeFields control={control} register={register} errors={errors} idPrefix="reg" />
 
       <FormField label="Password" htmlFor="reg-password" error={errors.password?.message} hint="8+ characters, one uppercase letter and one number." required>
         <PasswordInput id="reg-password" autoComplete="new-password" aria-invalid={!!errors.password} aria-describedby={describedBy("reg-password", errors.password?.message, "hint")} {...register("password")} />

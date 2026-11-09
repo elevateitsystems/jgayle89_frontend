@@ -8,6 +8,7 @@ import { PageHeader } from "./page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 import { analyzeCSV, CSV_COLUMNS, REQUIRED_COLUMNS, SAMPLE_CSV, SAMPLE_CSV_WITH_ERRORS, toCSV, type CsvAnalysis } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 import { businessService } from "@/services/business-service";
@@ -35,6 +36,7 @@ interface Loaded {
 
 export function CsvImport() {
   const { businesses } = useBusinesses();
+  const { categories } = useCategories();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<Loaded | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -44,8 +46,8 @@ export function CsvImport() {
   const [showAll, setShowAll] = useState(false);
 
   const analysis: CsvAnalysis | null = useMemo(
-    () => (file ? analyzeCSV(file.text, businesses.map((b) => b.name)) : null),
-    [file, businesses],
+    () => (file ? analyzeCSV(file.text, businesses.map((b) => b.name), categories) : null),
+    [file, businesses, categories],
   );
 
   async function handleFile(f?: File | null) {

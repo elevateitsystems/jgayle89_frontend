@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Info, Loader2 } from "lucide-react";
@@ -13,17 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { demoAccounts, DEMO_PASSWORD_HINT } from "@/data/users";
+import { homePathFor, safeNextPath } from "@/lib/permissions";
 import { loginSchema, type LoginValues } from "@/schemas/auth";
 import { authService } from "@/services/auth-service";
 
 export function LoginForm() {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get("next"));
   const [formError, setFormError] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -33,9 +37,11 @@ export function LoginForm() {
   async function onSubmit(values: LoginValues) {
     setFormError(null);
     try {
-      const session = await authService.login(values.email, values.password);
-      toast.success(`Welcome back, ${session.name.split(" ")[0]}!`, { description: "Signed in to the demo admin." });
-      router.push("/admin");
+      const user = await authService.login(values.email, values.password);
+      toast.success(`Welcome back, ${user.name.split(" ")[0]}!`, { description: `Signed in as ${user.role === "user" ? "a member" : user.role}.` });
+      // Members can't use admin links, so only follow `next` when it's actually reachable for them.
+      const target = next && (user.role !== "user" || !next.startsWith("/admin")) ? next : homePathFor(user);
+      router.push(target);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Something went wrong.";
       setFormError(message);
@@ -108,13 +114,32 @@ export function LoginForm() {
           )}
         </Button>
 
-        <p className="flex items-start gap-2 rounded-md bg-sand-100 px-3 py-2.5 text-xs leading-relaxed text-sand-700">
-          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          <span>
-            Demo sign-in: any valid email and an 8+ character password works. Try <code className="font-semibold">fail@demo.com</code> to
-            preview the error state.
-          </span>
-        </p>
+        <div className="rounded-md bg-sand-100 px-3 py-3 text-xs leading-relaxed text-sand-700">
+          <p className="flex items-start gap-2">
+            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>
+              Demo only. Pick an account to try each access level — the password isn&apos;t checked (8+ characters required).
+              Try <code className="font-semibold">fail@demo.com</code> to preview the error state.
+            </span>
+          </p>
+          <ul className="mt-2.5 grid gap-1.5 sm:grid-cols-2" aria-label="Demo accounts">
+            {demoAccounts.map((a) => (
+              <li key={a.email}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue("email", a.email, { shouldValidate: true });
+                    setValue("password", DEMO_PASSWORD_HINT, { shouldValidate: true });
+                  }}
+                  className="w-full rounded-md border border-sand-300 bg-white px-2.5 py-2 text-left transition-colors hover:border-olive-400 hover:bg-olive-50"
+                >
+                  <span className="block text-sm font-semibold text-olive-950">{a.label}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">{a.email}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </form>
       <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </>

@@ -1,39 +1,34 @@
 import { createCollectionStore, delay } from "@/lib/demo-store";
-import type { DemoSession } from "@/types";
+import { userService } from "@/services/user-service";
+import type { AppUser, ProfileLike, SessionRecord } from "@/types";
 
 /**
- * DEMO AUTH ONLY. There is no real authentication: any well-formed credentials
- * create a local "session" so the UI flows can be exercised. Replace with the
- * real auth API (tokens / cookies) in Phase 2.
+ * DEMO AUTH ONLY. There is no real authentication: the password is not checked
+ * (the form still requires 8+ characters). A "session" is just the id of a local
+ * demo account. Replace with the real auth API (tokens / cookies) — and remember
+ * the backend, not this code, is what must enforce roles and permissions.
  */
-export const sessionStore = createCollectionStore<DemoSession>("session", []);
+export const sessionStore = createCollectionStore<SessionRecord>("session", []);
 
 export const authService = {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async login(email: string, _password: string): Promise<DemoSession> {
+  async login(email: string, _password: string): Promise<AppUser> {
     await delay(700);
-    // Demo-only failure path so the error state can be seen.
-    if (email.toLowerCase().startsWith("fail@")) {
+    const user = userService.findByEmail(email);
+    if (!user || email.toLowerCase().startsWith("fail@")) {
       throw new Error("These credentials don't match our records.");
     }
-    const session: DemoSession = {
-      name: email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      email,
-      role: "admin",
-    };
-    sessionStore.set([session]);
-    return session;
+    if (user.status === "suspended") {
+      throw new Error("This account is suspended. Please contact support.");
+    }
+    sessionStore.set([{ userId: user.id }]);
+    return user;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async register(name: string, email: string, _password: string): Promise<DemoSession> {
-    await delay(900);
-    if (email.toLowerCase().startsWith("taken@")) {
-      throw new Error("An account with this email already exists.");
-    }
-    const session: DemoSession = { name, email, role: "member" };
-    sessionStore.set([session]);
-    return session;
+  async register(input: ProfileLike & { email: string }): Promise<AppUser> {
+    const user = await userService.register(input);
+    sessionStore.set([{ userId: user.id }]);
+    return user;
   },
 
   async logout(): Promise<void> {

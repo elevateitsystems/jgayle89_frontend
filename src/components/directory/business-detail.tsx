@@ -26,8 +26,8 @@ import { RatingPills } from "@/components/ratings/rating-pills";
 import { RatingsSection } from "@/components/ratings/ratings-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
-import { categoryById } from "@/data/categories";
 import { useBusiness, usePublicBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 import { useGoogleRating } from "@/hooks/use-google-rating";
 import { useBusinessReviews } from "@/hooks/use-reviews";
 import { useSiteSettings } from "@/hooks/use-settings";
@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 export function BusinessDetail({ slug }: { slug: string }) {
   const { business: b, loading } = useBusiness({ slug });
   const { businesses } = usePublicBusinesses();
+  const { categoryById } = useCategories();
   const settings = useSiteSettings();
   const reviews = useBusinessReviews(b?.id);
   const { google, loading: googleLoading } = useGoogleRating(b);

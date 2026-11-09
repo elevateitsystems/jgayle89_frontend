@@ -6,12 +6,13 @@ import { ArrowRight, MapPin } from "lucide-react";
 import { MapView } from "@/components/shared/map-view";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { buttonVariants } from "@/components/ui/button";
-import { categoryById } from "@/data/categories";
 import { usePublicBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 import { cn } from "@/lib/utils";
 
 export function MapSection() {
   const { businesses } = usePublicBusinesses();
+  const { categoryName } = useCategories();
   const [selected, setSelected] = useState<string | null>(null);
 
   const markers = useMemo(
@@ -21,11 +22,11 @@ export function MapSection() {
         lat: b.lat,
         lng: b.lng,
         title: b.name,
-        subtitle: `${categoryById(b.category)?.name} · ${b.city}, ${b.state}`,
+        subtitle: `${categoryName(b.category)} · ${b.city}, ${b.state}`,
         href: `/directory/${b.slug}`,
         image: b.coverImage,
       })),
-    [businesses],
+    [businesses, categoryName],
   );
 
   const spotlight = businesses.slice(0, 5);

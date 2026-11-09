@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BenefitDetail } from "@/components/benefits/benefit-detail";
+import { siteConfig } from "@/config/site";
 import { benefits } from "@/data/benefits";
 
 export function generateStaticParams() {
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/benefits/[slug]">
 
 export default async function BenefitPage({ params }: PageProps<"/benefits/[slug]">) {
   const { slug } = await params;
-  const benefit = benefits.find((x) => x.slug === slug);
+  const benefit = siteConfig.features.benefits ? benefits.find((x) => x.slug === slug) : undefined;
   if (!benefit) notFound();
   return <BenefitDetail benefit={benefit} />;
 }

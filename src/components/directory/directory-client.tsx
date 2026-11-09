@@ -10,8 +10,8 @@ import { MapView } from "@/components/shared/map-view";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { categoryById } from "@/data/categories";
 import { usePublicBusinesses } from "@/hooks/use-businesses";
+import { useCategories } from "@/hooks/use-categories";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useDirectoryFilters, type DirectoryView } from "@/hooks/use-directory-filters";
 import { activeFilterCount, filterBusinesses } from "@/lib/business-filters";
@@ -21,6 +21,7 @@ const PAGE_SIZE = 9;
 
 export function DirectoryClient() {
   const { businesses, loading } = usePublicBusinesses();
+  const { categoryById, categoryName } = useCategories();
   const { filters, update, clear, view, setView, page, setPage } = useDirectoryFilters();
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -33,18 +34,18 @@ export function DirectoryClient() {
   const debouncedLoc = useDebouncedValue(filters.location, 150);
 
   const results = useMemo(
-    () => filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc }),
-    [businesses, filters, debouncedQ, debouncedLoc],
+    () => filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc }, categoryName),
+    [businesses, filters, debouncedQ, debouncedLoc, categoryName],
   );
 
   // Category counts reflect the other active filters (but not category itself).
   const counts = useMemo(() => {
-    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "" });
+    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "" }, categoryName);
     return base.reduce<Record<string, number>>((acc, b) => {
       acc[b.category] = (acc[b.category] ?? 0) + 1;
       return acc;
     }, {});
-  }, [businesses, filters, debouncedQ, debouncedLoc]);
+  }, [businesses, filters, debouncedQ, debouncedLoc, categoryName]);
   const totalForCounts = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
@@ -67,7 +68,7 @@ export function DirectoryClient() {
         href: `/directory/${b.slug}`,
         image: b.coverImage,
       })),
-    [results],
+    [results, categoryById],
   );
 
   function goToPage(n: number) {

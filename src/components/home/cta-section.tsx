@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,6 +8,8 @@ export function CtaSection() {
   return (
     <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24" aria-labelledby="cta-heading">
       <div className="relative mx-auto max-w-7xl overflow-hidden rounded-xl bg-olive-800 px-6 py-14 text-center text-white sm:px-12 sm:py-20">
+        <Image src="/images/flag.jpg" alt="" fill sizes="(min-width: 1280px) 1280px, 100vw" className="object-cover opacity-25" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-b from-olive-800/70 via-olive-800/80 to-olive-900/90" aria-hidden />
         <div className="topo-bg absolute inset-0 opacity-[0.18]" aria-hidden />
         <div className="relative mx-auto max-w-2xl">
           <p className="eyebrow !text-olive-200">Join the mission</p>

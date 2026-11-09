@@ -55,16 +55,22 @@ export function Hero() {
               </div>
             ))}
           </dl>
+
+          {/* Smaller screens don't get the photo collage, so show a single banner instead. */}
+          <div className="relative mt-8 aspect-[16/9] overflow-hidden rounded-lg lg:hidden" aria-hidden>
+            <Image src="/images/navy-flag-raising.jpg" alt="" fill sizes="(min-width: 640px) 90vw, 100vw" className="object-cover object-[35%_50%]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-olive-950/40 via-transparent to-transparent" />
+          </div>
         </div>
 
         <div className="relative hidden lg:col-span-5 lg:block" aria-hidden>
           <div className="grid h-[500px] grid-cols-5 grid-rows-6 gap-3 xl:h-[560px]">
             <div className="relative col-span-3 row-span-6 overflow-hidden rounded-lg">
-              <Image src="/images/handshake.jpg" alt="" fill sizes="25vw" priority className="object-cover" />
-              <div className="absolute inset-0 bg-olive-950/20" />
+              <Image src="/images/marines-color-guard.jpg" alt="" fill sizes="25vw" priority className="object-cover object-[50%_65%]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-olive-950/35 via-transparent to-transparent" />
             </div>
             <div className="relative col-span-2 row-span-3 overflow-hidden rounded-lg">
-              <Image src="/images/welding.jpg" alt="" fill sizes="18vw" className="object-cover" />
+              <Image src="/images/navy-flag-raising.jpg" alt="" fill sizes="18vw" className="object-cover object-[35%_50%]" />
             </div>
             <div className="relative col-span-2 row-span-3 overflow-hidden rounded-lg">
               <Image src="/images/coffee.jpg" alt="" fill sizes="18vw" className="object-cover" />

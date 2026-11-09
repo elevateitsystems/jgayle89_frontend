@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, LogOut, Menu, UserRound } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, UserRound, UserRoundCog } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { siteConfig } from "@/config/site";
 import { useSession } from "@/hooks/use-session";
 import { authService } from "@/services/auth-service";
+import { ROLE_LABEL, USER_TYPE_LABEL, isBackOffice } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -29,6 +30,9 @@ export function SiteHeader() {
   const router = useRouter();
   const session = useSession();
   const [open, setOpen] = useState(false);
+  const backOffice = isBackOffice(session);
+  /** e.g. "Veteran / Military" for members, "Staff" / "Administrator" for the back office. */
+  const roleLine = session ? (session.role === "user" && session.userType ? USER_TYPE_LABEL[session.userType] : ROLE_LABEL[session.role]) : "";
 
   async function signOut() {
     await authService.logout();
@@ -75,9 +79,15 @@ export function SiteHeader() {
                 </span>
                 <span className="max-w-32 truncate">{session.name}</span>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52 gap-1 p-1.5">
-                <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push("/admin")}>
-                  <LayoutDashboard /> Admin dashboard
+              <DropdownMenuContent align="end" className="w-56 gap-1 p-1.5">
+                <p className="px-3 py-2 text-xs text-muted-foreground">{roleLine}</p>
+                {backOffice && (
+                  <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push("/admin")}>
+                    <LayoutDashboard /> Dashboard
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push("/account")}>
+                  <UserRoundCog /> My profile
                 </DropdownMenuItem>
                 <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={signOut}>
                   <LogOut /> Sign out
@@ -130,10 +140,18 @@ export function SiteHeader() {
               {session ? (
                 <>
                   <p className="flex items-center gap-2 pb-1 text-sm text-muted-foreground">
-                    <UserRound className="size-4" /> Signed in as {session.name}
+                    <UserRound className="size-4" /> {session.name} · {roleLine}
                   </p>
-                  <SheetClose nativeButton={false} render={<Link href="/admin" className={buttonVariants({ size: "lg" })} />}>
-                    Admin dashboard
+                  {backOffice && (
+                    <SheetClose nativeButton={false} render={<Link href="/admin" className={buttonVariants({ size: "lg" })} />}>
+                      Dashboard
+                    </SheetClose>
+                  )}
+                  <SheetClose
+                    nativeButton={false}
+                    render={<Link href="/account" className={buttonVariants({ variant: backOffice ? "outline" : "default", size: "lg" })} />}
+                  >
+                    My profile
                   </SheetClose>
                   <Button variant="outline" size="lg" onClick={signOut}>
                     Sign out

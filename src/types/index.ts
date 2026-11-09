@@ -120,10 +120,41 @@ export interface TimeseriesPoint {
   value: number;
 }
 
-export interface DemoSession {
+/** Access level. Admin = everything; Staff = only their assigned permissions; User = registered member. */
+export type UserRole = "admin" | "staff" | "user";
+
+/**
+ * Registered users are either Veterans/Military or Civilians. This is a profile
+ * attribute, NOT a permission role — both get the same standard member access.
+ */
+export type UserType = "veteran" | "civilian";
+
+/** Phase 1 staff permissions. (Resources / Appointments / Orders arrive in later phases.) */
+export type Permission = "businesses.manage" | "photos.upload" | "csv.import" | "events.manage";
+
+export type UserStatus = "active" | "suspended";
+
+export interface AppUser {
+  id: string;
   name: string;
   email: string;
-  role: "admin" | "member";
+  role: UserRole;
+  userType?: UserType;
+  branch?: BranchOfService; // veterans / military only
+  permissions: Permission[]; // meaningful for staff only; admin has all, user has none
+  status: UserStatus;
+  createdAt: string; // ISO date
+}
+
+export interface ProfileLike {
+  name: string;
+  userType: UserType;
+  branch?: BranchOfService;
+}
+
+/** What is persisted for "who is signed in" — resolved to an AppUser by useSession. */
+export interface SessionRecord {
+  userId: string;
 }
 
 export type BenefitCategory =
