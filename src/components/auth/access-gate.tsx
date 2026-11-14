@@ -70,13 +70,17 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function AccessDenied({ state, pathname }: { state: Exclude<AccessState, "allowed">; pathname: string }) {
+export function AccessDenied({ state, pathname, variant = "staff" }: { state: Exclude<AccessState, "allowed">; pathname: string; variant?: "staff" | "member" }) {
   if (state === "signed-out") {
     return (
       <Notice
         icon={LockKeyhole}
         title="Sign in required"
-        description="The management dashboard is for Mission: SITREP administrators and staff. Please sign in to continue."
+        description={
+          variant === "member"
+            ? "Sign in to open your Mission: SITREP dashboard — membership, saved businesses and more."
+            : "The management dashboard is for Mission: SITREP administrators and staff. Please sign in to continue."
+        }
         actions={[
           { href: loginHref(pathname), label: "Sign in", primary: true },
           { href: "/", label: "Back to site" },

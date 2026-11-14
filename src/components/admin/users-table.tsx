@@ -16,13 +16,16 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useStore } from "@/hooks/use-store";
 import { formatDate } from "@/lib/date";
-import { USER_TYPE_LABEL } from "@/lib/permissions";
+import { USER_TYPE_LABEL, isAdmin } from "@/lib/permissions";
+import { useSession } from "@/hooks/use-session";
 import { userService, userStore } from "@/services/user-service";
 import type { AppUser } from "@/types";
 
 /** Registered members (role "user"). Staff and admins are managed on the Staff page. */
 export function UsersTable() {
   const all = useStore(userStore);
+  const session = useSession();
+  const canDelete = isAdmin(session); // staff with "Manage members" can suspend/reactivate but not delete
   const members = useMemo(() => all.filter((u) => u.role === "user"), [all]);
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
@@ -42,6 +45,7 @@ export function UsersTable() {
       total: members.length,
       veteran: members.filter((u) => u.userType === "veteran").length,
       civilian: members.filter((u) => u.userType === "civilian").length,
+      owners: members.filter((u) => u.userType === "business_owner").length,
       suspended: members.filter((u) => u.status === "suspended").length,
     }),
     [members],
@@ -77,14 +81,15 @@ export function UsersTable() {
     <>
       <PageHeader
         title="Users"
-        description="Registered community members. Veteran / Military and Civilian are account types — both have the same member access."
+        description={canDelete ? "Registered community members. Veteran / Military, Civilian and Business Owner are account types." : "Registered community members. You can suspend or reactivate accounts; only administrators can delete them."}
       />
 
-      <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
           ["Registered users", counts.total],
           ["Veteran / Military", counts.veteran],
           ["Civilian", counts.civilian],
+          ["Business owners", counts.owners],
           ["Suspended", counts.suspended],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border bg-card p-4 shadow-card">
@@ -111,6 +116,7 @@ export function UsersTable() {
             <option value="">All account types</option>
             <option value="veteran">Veteran / Military</option>
             <option value="civilian">Civilian</option>
+            <option value="business_owner">Business Owner</option>
           </NativeSelect>
           <NativeSelect aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
@@ -165,10 +171,14 @@ export function UsersTable() {
                           {u.status === "active" ? <Ban /> : <CheckCircle2 />}
                           {u.status === "active" ? "Suspend" : "Reactivate"}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onClick={() => setToDelete(u)}>
-                          <Trash2 /> Delete
-                        </DropdownMenuItem>
+                        {canDelete && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" onClick={() => setToDelete(u)}>
+                              <Trash2 /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

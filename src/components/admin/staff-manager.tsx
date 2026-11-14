@@ -19,12 +19,12 @@ import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useStore } from "@/hooks/use-store";
-import { PHASE1_PERMISSIONS } from "@/lib/permissions";
+import { STAFF_PERMISSIONS } from "@/lib/permissions";
 import { staffSchema, type StaffFormValues } from "@/schemas/staff";
 import { userService, userStore } from "@/services/user-service";
 import type { AppUser } from "@/types";
 
-const permissionLabel = (id: string) => PHASE1_PERMISSIONS.find((p) => p.id === id)?.label ?? id;
+const permissionLabel = (id: string) => STAFF_PERMISSIONS.find((p) => p.id === id)?.label ?? id;
 
 export function StaffManager() {
   const all = useStore(userStore);
@@ -144,7 +144,7 @@ export function StaffManager() {
           <div className="rounded-lg border bg-card p-5 shadow-card">
             <h2 className="font-sans text-base font-semibold text-olive-950">What each permission allows</h2>
             <dl className="mt-3 space-y-3 text-sm">
-              {PHASE1_PERMISSIONS.map((p) => (
+              {STAFF_PERMISSIONS.map((p) => (
                 <div key={p.id}>
                   <dt className="font-medium text-olive-950">{p.label}</dt>
                   <dd className="text-muted-foreground">{p.description}</dd>
@@ -226,7 +226,7 @@ function StaffFormSheet({ open, onOpenChange, staff }: { open: boolean; onOpenCh
               name="permissions"
               render={({ field }) => (
                 <ul className="space-y-2">
-                  {PHASE1_PERMISSIONS.map((p) => {
+                  {STAFF_PERMISSIONS.map((p) => {
                     const checked = field.value.includes(p.id);
                     return (
                       <li key={p.id}>

@@ -6,6 +6,8 @@ import { useMemo } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
+  Percent,
+  Share2,
   CalendarDays,
   Check,
   ChevronRight,
@@ -18,6 +20,13 @@ import {
   Phone,
 } from "lucide-react";
 import { BusinessCard } from "./business-card";
+import { SaveBusinessButton } from "./save-business-button";
+import { BadgeDetailList, BadgeRow } from "@/components/badges/business-badge";
+import { HiringChip } from "@/components/business/hiring-toggle";
+import { SocialLinksList } from "@/components/business/social-links";
+import { StatusPill } from "@/components/dashboard/status-pill";
+import { useBusinessBadges } from "@/features/badges/hooks";
+import { todayISO, formatDate } from "@/lib/date";
 import { BusinessAvatar } from "@/components/shared/monogram";
 import { DemoNotice } from "@/components/shared/demo-notice";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -41,6 +50,7 @@ export function BusinessDetail({ slug }: { slug: string }) {
   const settings = useSiteSettings();
   const reviews = useBusinessReviews(b?.id);
   const { google, loading: googleLoading } = useGoogleRating(b);
+  const badges = useBusinessBadges(b?.id);
 
   const related = useMemo(() => {
     if (!b) return [];
@@ -67,6 +77,7 @@ export function BusinessDetail({ slug }: { slug: string }) {
   }
 
   const category = categoryById(b.category);
+  const activePromos = (b.promotions ?? []).filter((p) => !p.validUntil || p.validUntil >= todayISO());
   const fullAddress = `${b.address}, ${b.city}, ${b.state} ${b.zip}`;
   const directionsHref = `https://www.openstreetmap.org/directions?to=${b.lat}%2C${b.lng}`;
 
@@ -115,6 +126,7 @@ export function BusinessDetail({ slug }: { slug: string }) {
               <div className="mt-4">
                 <RatingPills business={b} google={shouldShowGoogleRating(settings, google) ? google : null} />
               </div>
+              <BadgeRow businessId={b.id} size="md" className="mt-3" leading={b.hiring ? <HiringChip hiring className="px-3 py-1 text-xs" /> : undefined} />
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <MapPin className="size-4 text-olive-600" aria-hidden /> {b.city}, {b.state}
@@ -128,6 +140,7 @@ export function BusinessDetail({ slug }: { slug: string }) {
               <a href={`tel:${b.phone}`} className={cn(buttonVariants({ size: "lg" }))}>
                 <Phone /> Call
               </a>
+              <SaveBusinessButton businessId={b.id} businessName={b.name} />
               {b.website && (
                 <a href={b.website} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
                   <Globe /> Website
@@ -161,6 +174,30 @@ export function BusinessDetail({ slug }: { slug: string }) {
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {activePromos.length > 0 && (
+              <section aria-labelledby="offers-h">
+                <h2 id="offers-h" className="text-2xl font-semibold text-olive-950">Offers</h2>
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {activePromos.map((p) => (
+                    <li key={p.id} className="rounded-md border border-brass/40 bg-brass-soft/50 p-4">
+                      <div className="flex flex-wrap items-center gap-2"><StatusPill tone="warn"><Percent className="size-3" aria-hidden /> {p.discountText}</StatusPill></div>
+                      <p className="mt-2 font-semibold text-olive-950">{p.title}</p>
+                      <p className="text-sm text-muted-foreground">{p.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{p.audience === "veterans" ? "For veterans & military" : p.audience === "first_responders" ? "For first responders" : "For everyone"}{p.validUntil ? ` · until ${formatDate(p.validUntil)}` : ""}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {badges.length > 0 && (
+              <section aria-labelledby="badges-h">
+                <h2 id="badges-h" className="text-2xl font-semibold text-olive-950">Badges</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Badges are verified by Mission: SITREP staff — they are never part of a paid plan.</p>
+                <div className="mt-4"><BadgeDetailList businessId={b.id} /></div>
               </section>
             )}
 
@@ -209,6 +246,11 @@ export function BusinessDetail({ slug }: { slug: string }) {
                     <a href={b.website} target="_blank" rel="noopener noreferrer" className="break-all text-olive-700 underline-offset-2 hover:underline">
                       {b.website.replace(/^https?:\/\//, "")}
                     </a>
+                  </InfoRow>
+                )}
+                {(b.socialLinks?.length ?? 0) > 0 && (
+                  <InfoRow icon={Share2} label="Find us online">
+                    <SocialLinksList links={b.socialLinks ?? []} variant="icons" className="mt-1" />
                   </InfoRow>
                 )}
                 <InfoRow icon={Clock} label="Hours">{b.hours || "Contact for hours"}</InfoRow>

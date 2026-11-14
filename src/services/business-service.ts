@@ -71,6 +71,21 @@ export const businessService = {
     return next;
   },
 
+  /**
+   * Hiring status is the ONE listing field an owner may change directly (it needs no review).
+   * Everything else goes through the edit-request workflow.
+   */
+  async setHiring(id: string, ownerId: string, hiring: boolean): Promise<Business> {
+    await delay(250);
+    const all = businessStore.getSnapshot();
+    const current = all.find((b) => b.id === id);
+    if (!current) throw new Error("Business not found");
+    if (current.ownerId !== ownerId) throw new Error("You can only change hiring status for businesses you own.");
+    const next: Business = { ...current, hiring };
+    businessStore.set(all.map((b) => (b.id === id ? next : b)));
+    return next;
+  },
+
   async remove(id: string): Promise<void> {
     await delay(350);
     businessStore.set(businessStore.getSnapshot().filter((b) => b.id !== id));

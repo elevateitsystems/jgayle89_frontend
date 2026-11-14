@@ -10,6 +10,13 @@ export function daysFromToday(n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** `todayISO()` shifted by `n` days (alias of daysFromToday, reads better in analytics code). */
+export const addDays = daysFromToday;
+
+export function daysBetween(fromISO: string, toISO: string): number {
+  return Math.round((parse(toISO).getTime() - parse(fromISO).getTime()) / 86_400_000);
+}
+
 function parse(iso: string) {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d));

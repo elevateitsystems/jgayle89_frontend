@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
+import { EventSponsor } from "@/components/sponsorship/placements";
 import { dayNum, formatTime, monthShort } from "@/lib/date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ export function EventCard({ event: e, priority }: { event: CommunityEvent; prior
           {e.title}
         </h3>
         <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-foreground/80">{e.summary}</p>
+        <EventSponsor eventId={e.id} className="mt-3" />
         <dl className="mt-auto space-y-1.5 pt-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <dt className="sr-only">Time</dt>
