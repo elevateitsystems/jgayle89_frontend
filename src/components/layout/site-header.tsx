@@ -17,7 +17,7 @@ import {
 import { siteConfig } from "@/config/site";
 import { useSession } from "@/hooks/use-session";
 import { authService } from "@/services/auth-service";
-import { ROLE_LABEL, USER_TYPE_LABEL, isBackOffice } from "@/lib/permissions";
+import { ROLE_LABEL, USER_TYPE_LABEL, homePathFor } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -30,7 +30,6 @@ export function SiteHeader() {
   const router = useRouter();
   const session = useSession();
   const [open, setOpen] = useState(false);
-  const backOffice = isBackOffice(session);
   /** e.g. "Veteran / Military" for members, "Staff" / "Administrator" for the back office. */
   const roleLine = session ? (session.role === "user" && session.userType ? USER_TYPE_LABEL[session.userType] : ROLE_LABEL[session.role]) : "";
 
@@ -81,11 +80,9 @@ export function SiteHeader() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 gap-1 p-1.5">
                 <p className="px-3 py-2 text-xs text-muted-foreground">{roleLine}</p>
-                {backOffice && (
-                  <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push("/admin")}>
-                    <LayoutDashboard /> Dashboard
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push(homePathFor(session))}>
+                  <LayoutDashboard /> Dashboard
+                </DropdownMenuItem>
                 <DropdownMenuItem className="px-3 py-2.5 text-sm" onClick={() => router.push("/account")}>
                   <UserRoundCog /> My profile
                 </DropdownMenuItem>
@@ -142,14 +139,12 @@ export function SiteHeader() {
                   <p className="flex items-center gap-2 pb-1 text-sm text-muted-foreground">
                     <UserRound className="size-4" /> {session.name} · {roleLine}
                   </p>
-                  {backOffice && (
-                    <SheetClose nativeButton={false} render={<Link href="/admin" className={buttonVariants({ size: "lg" })} />}>
-                      Dashboard
-                    </SheetClose>
-                  )}
+                  <SheetClose nativeButton={false} render={<Link href={homePathFor(session)} className={buttonVariants({ size: "lg" })} />}>
+                    Dashboard
+                  </SheetClose>
                   <SheetClose
                     nativeButton={false}
-                    render={<Link href="/account" className={buttonVariants({ variant: backOffice ? "outline" : "default", size: "lg" })} />}
+                    render={<Link href="/account" className={buttonVariants({ variant: "outline", size: "lg" })} />}
                   >
                     My profile
                   </SheetClose>

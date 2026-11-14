@@ -1,4 +1,5 @@
 import type { Business } from "@/types";
+import { businessExtras } from "../lib/mock-data/business-extras.ts";
 
 /**
  * DEMO DATA — every business below is fictional. Ratings, review counts,
@@ -552,4 +553,9 @@ export const businesses: Business[] = seeds.map((s, i) => ({
   id: `biz_${String(i + 1).padStart(3, "0")}`,
   featured: s.featured ?? false,
   status: s.status ?? "active",
+  // Ownership, hiring, social links and promotions live in lib/mock-data/business-extras.
+  hiring: false,
+  socialLinks: [],
+  promotions: [],
+  ...businessExtras[s.slug],
 }));

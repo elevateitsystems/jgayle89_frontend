@@ -6,6 +6,10 @@ export interface BusinessFilters {
   category: string; // "" = all
   branch: string; // "" = all
   minRating: number; // 0 = any
+  /** Badge ids the business must ALL hold (each added badge narrows the results). */
+  badges: string[];
+  /** Only businesses currently hiring. */
+  hiring: boolean;
   sort: "featured" | "rating" | "name" | "newest";
 }
 
@@ -15,6 +19,8 @@ export const defaultFilters: BusinessFilters = {
   category: "",
   branch: "",
   minRating: 0,
+  badges: [],
+  hiring: false,
   sort: "featured",
 };
 
@@ -25,6 +31,8 @@ export function filterBusinesses(
   f: BusinessFilters,
   /** Resolves a category id to its display name so keyword search matches category names. */
   categoryName: (id: string) => string = () => "",
+  /** Resolves the active badge ids a business holds (badges live in their own store, not on the listing). */
+  badgeIdsFor: (businessId: string) => string[] = () => [],
 ): Business[] {
   const q = norm(f.q);
   const loc = norm(f.location);
@@ -32,6 +40,11 @@ export function filterBusinesses(
     if (f.category && b.category !== f.category) return false;
     if (f.branch && b.branch !== f.branch) return false;
     if (f.minRating && b.rating < f.minRating) return false;
+    if (f.hiring && !b.hiring) return false;
+    if (f.badges.length) {
+      const held = badgeIdsFor(b.id);
+      if (!f.badges.every((id) => held.includes(id))) return false;
+    }
     if (loc) {
       const hay = norm(`${b.city} ${b.state} ${b.zip} ${b.address}`);
       if (!loc.split(/[\s,]+/).filter(Boolean).every((t) => hay.includes(t))) return false;
@@ -63,7 +76,7 @@ export function filterBusinesses(
 }
 
 export function activeFilterCount(f: BusinessFilters) {
-  return [f.q, f.location, f.category, f.branch, f.minRating ? "r" : ""].filter(Boolean).length;
+  return [f.q, f.location, f.category, f.branch, f.minRating ? "r" : "", f.hiring ? "h" : "", ...f.badges].filter(Boolean).length;
 }
 
 export function filterEvents(

@@ -1,3 +1,11 @@
+import type { Promotion, SocialLink } from "./business-ops";
+
+export * from "./membership";
+export * from "./business-ops";
+export * from "./badges";
+export * from "./advertising";
+export * from "./member";
+
 export type ListingStatus = "active" | "pending" | "draft";
 export type EventStatus = "published" | "draft";
 
@@ -48,6 +56,14 @@ export interface Business {
   createdAt: string; // ISO date
   /** Reserved for the future Google Places integration; unused by the mock provider. */
   googlePlaceId?: string;
+  /** AppUser.id of the owning Business Owner account. Owners can only *request* edits to the listing. */
+  ownerId?: string;
+  /** Owner-controlled switch (the one listing field owners may change directly). */
+  hiring?: boolean;
+  /** Public social links. Changes go through the edit-request workflow. */
+  socialLinks?: SocialLink[];
+  /** Discounts shown on the public profile. Changes go through the edit-request workflow. */
+  promotions?: Promotion[];
 }
 
 /** A review left on the Mission: SITREP platform itself (not Google). */
@@ -127,10 +143,21 @@ export type UserRole = "admin" | "staff" | "user";
  * Registered users are either Veterans/Military or Civilians. This is a profile
  * attribute, NOT a permission role — both get the same standard member access.
  */
-export type UserType = "veteran" | "civilian";
+export type UserType = "veteran" | "civilian" | "business_owner";
 
-/** Phase 1 staff permissions. (Resources / Appointments / Orders arrive in later phases.) */
-export type Permission = "businesses.manage" | "photos.upload" | "csv.import" | "events.manage";
+/** Staff permissions. Admins implicitly have all of them; staff only what an admin assigned. */
+export type Permission =
+  | "businesses.manage"
+  | "photos.upload"
+  | "csv.import"
+  | "events.manage"
+  | "edits.review"
+  | "verification.review"
+  | "badges.manage"
+  | "benefits.manage"
+  | "sponsorships.review"
+  | "advertising.review"
+  | "users.manage";
 
 export type UserStatus = "active" | "suspended";
 
@@ -148,7 +175,8 @@ export interface AppUser {
 
 export interface ProfileLike {
   name: string;
-  userType: UserType;
+  /** Self-service sign-up and profile edits only cover members; Business Owner is assigned elsewhere. */
+  userType: Exclude<UserType, "business_owner">;
   branch?: BranchOfService;
 }
 

@@ -32,6 +32,8 @@ export const siteConfig = {
   nav: [
     { label: "Directory", href: "/directory" },
     { label: "Events", href: "/events" },
+    { label: "Resources", href: "/resources" },
+    { label: "Pricing", href: "/pricing" },
     ...(features.benefits ? [{ label: "Veteran Benefits", href: "/benefits" }] : []),
     { label: "About", href: "/#mission" },
   ],

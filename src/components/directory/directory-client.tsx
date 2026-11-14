@@ -10,6 +10,10 @@ import { MapView } from "@/components/shared/map-view";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { DirectoryBanner, GeoSponsorBanner } from "@/components/sponsorship/placements";
+import { useLiveCampaigns } from "@/features/advertising/hooks";
+import { pinSponsored } from "@/features/advertising/rules";
+import { useBadgeLookup } from "@/features/badges/hooks";
 import { usePublicBusinesses } from "@/hooks/use-businesses";
 import { useCategories } from "@/hooks/use-categories";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -22,6 +26,8 @@ const PAGE_SIZE = 9;
 export function DirectoryClient() {
   const { businesses, loading } = usePublicBusinesses();
   const { categoryById, categoryName } = useCategories();
+  const { badges, idsFor } = useBadgeLookup();
+  const live = useLiveCampaigns();
   const { filters, update, clear, view, setView, page, setPage } = useDirectoryFilters();
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -33,19 +39,21 @@ export function DirectoryClient() {
   const debouncedQ = useDebouncedValue(filters.q, 150);
   const debouncedLoc = useDebouncedValue(filters.location, 150);
 
-  const results = useMemo(
-    () => filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc }, categoryName),
-    [businesses, filters, debouncedQ, debouncedLoc, categoryName],
+  const matches = useMemo(
+    () => filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc }, categoryName, idsFor),
+    [businesses, filters, debouncedQ, debouncedLoc, categoryName, idsFor],
   );
+  // Paid placements are pinned to the top of results the visitor's filters already match — and always labelled.
+  const { list: results, sponsoredIds } = useMemo(() => pinSponsored(matches, live, { category: filters.category }), [matches, live, filters.category]);
 
   // Category counts reflect the other active filters (but not category itself).
   const counts = useMemo(() => {
-    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "" }, categoryName);
+    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "" }, categoryName, idsFor);
     return base.reduce<Record<string, number>>((acc, b) => {
       acc[b.category] = (acc[b.category] ?? 0) + 1;
       return acc;
     }, {});
-  }, [businesses, filters, debouncedQ, debouncedLoc, categoryName]);
+  }, [businesses, filters, debouncedQ, debouncedLoc, categoryName, idsFor]);
   const totalForCounts = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
@@ -80,6 +88,8 @@ export function DirectoryClient() {
     filters.category && { key: "category", label: categoryById(filters.category)?.name ?? filters.category, clear: () => update({ category: "" }) },
     filters.branch && { key: "branch", label: filters.branch, clear: () => update({ branch: "" }) },
     filters.minRating > 0 && { key: "rating", label: `${filters.minRating}+ stars`, clear: () => update({ minRating: 0 }) },
+    filters.hiring && { key: "hiring", label: "Currently hiring", clear: () => update({ hiring: false }) },
+    ...filters.badges.map((id) => ({ key: `badge-${id}`, label: badges.find((b) => b.id === id)?.name ?? id, clear: () => update({ badges: filters.badges.filter((x) => x !== id) }) })),
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
   const views: { id: DirectoryView; label: string; icon: typeof LayoutGrid }[] = [
@@ -235,8 +245,10 @@ export function DirectoryClient() {
               </ul>
             )}
 
-            <div className="mt-5">
+            <div className="mt-5 space-y-4">
               <DemoNotice />
+              <DirectoryBanner />
+              <GeoSponsorBanner location={filters.location} />
             </div>
 
             {/* Results */}
@@ -259,7 +271,7 @@ export function DirectoryClient() {
                   <ul className="order-2 max-h-none space-y-3 lg:order-1 lg:max-h-[640px] lg:overflow-y-auto lg:pr-1">
                     {results.map((b) => (
                       <li key={b.id} onClick={() => setSelected(b.id)}>
-                        <BusinessCard business={b} variant="grid" active={(selected ?? hovered) === b.id} onHover={setHovered} />
+                        <BusinessCard business={b} variant="grid" sponsored={sponsoredIds.has(b.id)} active={(selected ?? hovered) === b.id} onHover={setHovered} />
                       </li>
                     ))}
                   </ul>
@@ -274,7 +286,7 @@ export function DirectoryClient() {
                 <ul className={cn("grid gap-5", view === "list" ? "grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-3")}>
                   {paged.map((b, i) => (
                     <li key={b.id}>
-                      <BusinessCard business={b} variant={view === "list" ? "list" : "grid"} priority={i < 3} />
+                      <BusinessCard business={b} variant={view === "list" ? "list" : "grid"} priority={i < 3} sponsored={sponsoredIds.has(b.id)} />
                     </li>
                   ))}
                 </ul>

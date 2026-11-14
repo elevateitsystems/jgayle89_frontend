@@ -32,6 +32,10 @@ import { useClientNow } from "@/hooks/use-store";
 import { isUpcoming, timeAgo } from "@/lib/date";
 import { ROLE_LABEL, hasPermission, isAdmin } from "@/lib/permissions";
 import { userStore } from "@/services/user-service";
+import { useAdProducts, useCampaigns } from "@/features/advertising/hooks";
+import { useBadgeRequests } from "@/features/badges/hooks";
+import { useEditRequests } from "@/features/business/hooks";
+import { useSubscriptions } from "@/features/membership/hooks";
 import { cn } from "@/lib/utils";
 
 const activityIcon: Record<string, LucideIcon> = {
@@ -52,6 +56,19 @@ export function DashboardClient() {
   const canPhotos = hasPermission(user, "photos.upload");
   const canImport = hasPermission(user, "csv.import");
   const canEvents = hasPermission(user, "events.manage");
+  const edits = useEditRequests();
+  const badgeRequests = useBadgeRequests();
+  const campaigns = useCampaigns();
+  const products = useAdProducts();
+  const subs = useSubscriptions();
+  const familyOf = (productId: string) => products.find((p) => p.id === productId)?.family;
+  const queues = [
+    { label: "Business edit requests", href: "/admin/edit-requests", show: hasPermission(user, "edits.review"), count: edits.filter((r) => r.status === "pending").length },
+    { label: "Badge verification requests", href: "/admin/verification", show: hasPermission(user, "verification.review"), count: badgeRequests.filter((r) => r.status === "pending").length },
+    { label: "Advertising to review", href: "/admin/advertising-reviews", show: hasPermission(user, "advertising.review"), count: campaigns.filter((c) => c.status === "pending_review" && familyOf(c.productId) === "advertising").length },
+    { label: "Sponsorships to review", href: "/admin/sponsorship-approvals", show: hasPermission(user, "sponsorships.review"), count: campaigns.filter((c) => c.status === "pending_review" && familyOf(c.productId) === "sponsorship").length },
+    { label: "Past-due subscriptions", href: "/admin/subscriptions", show: isAdmin(user), count: subs.filter((s) => s.status === "past_due").length },
+  ].filter((q) => q.show);
   const team = useMemo(
     () => ({
       staff: users.filter((u) => u.role === "staff").length,
@@ -116,6 +133,22 @@ export function DashboardClient() {
           </>
         }
       />
+
+      {queues.length > 0 && (
+        <section aria-label="Needs attention" className="mb-6">
+          <h2 className="mb-3 font-sans text-sm font-semibold uppercase tracking-[0.14em] text-olive-700">Needs attention</h2>
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {queues.map((q) => (
+              <li key={q.href}>
+                <Link href={q.href} className={cn("flex h-full items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-card transition-colors hover:border-olive-300", q.count > 0 && "border-brass/50 bg-brass-soft/40")}>
+                  <span className="text-sm font-medium text-olive-950">{q.label}</span>
+                  <span className="font-heading text-2xl font-semibold tabular-nums text-olive-950">{q.count}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-label="Key statistics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (

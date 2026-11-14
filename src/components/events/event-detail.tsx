@@ -1,5 +1,6 @@
 "use client";
 
+import { EventSponsor } from "@/components/sponsorship/placements";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -96,6 +97,7 @@ export function EventDetail({ slug }: { slug: string }) {
               <strong className="font-semibold">Draft</strong> — this event is not published and is only visible to admins.
             </p>
           )}
+          <EventSponsor eventId={e.id} className="rounded-md border bg-white px-4 py-3 text-sm" />
           <section aria-labelledby="ev-about">
             <h2 id="ev-about" className="text-2xl font-semibold text-olive-950">About this event</h2>
             <div className="mt-4 space-y-4 text-base leading-relaxed text-foreground/85">

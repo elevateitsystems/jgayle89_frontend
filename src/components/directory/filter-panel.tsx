@@ -1,6 +1,9 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Briefcase, Star } from "lucide-react";
+import { BadgePill } from "@/components/badges/business-badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBadgeLookup } from "@/features/badges/hooks";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useCategories } from "@/hooks/use-categories";
@@ -20,6 +23,8 @@ interface Props {
 
 export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }: Props) {
   const { categories } = useCategories();
+  const { badges, counts: badgeCounts } = useBadgeLookup();
+  const activeBadges = badges.filter((b) => b.active).sort((a, b) => a.sortOrder - b.sortOrder);
   return (
     <div className="space-y-7">
       <fieldset>
@@ -39,6 +44,36 @@ export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }
             </li>
           ))}
         </ul>
+      </fieldset>
+
+      {activeBadges.length > 0 && (
+        <fieldset>
+          <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-olive-700">Badges &amp; verification</legend>
+          <ul className="space-y-1">
+            {activeBadges.map((b) => {
+              const id = `${idPrefix}-badge-${b.id}`;
+              const checked = filters.badges.includes(b.id);
+              return (
+                <li key={b.id}>
+                  <label htmlFor={id} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-olive-50">
+                    <Checkbox id={id} checked={checked} onCheckedChange={(c) => onChange({ badges: c ? [...filters.badges, b.id] : filters.badges.filter((x) => x !== b.id) })} />
+                    <BadgePill badge={b} />
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">{badgeCounts[b.id] ?? 0}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">Badges are earned through review. Showing businesses with all selected badges.</p>
+        </fieldset>
+      )}
+
+      <fieldset>
+        <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-olive-700">Hiring</legend>
+        <label htmlFor={`${idPrefix}-hiring`} className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-olive-50">
+          <Checkbox id={`${idPrefix}-hiring`} checked={filters.hiring} onCheckedChange={(c) => onChange({ hiring: !!c })} />
+          <Briefcase className="size-4 text-olive-700" aria-hidden /> Currently hiring
+        </label>
       </fieldset>
 
       <div className="space-y-2">

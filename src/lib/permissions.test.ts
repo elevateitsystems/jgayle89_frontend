@@ -41,9 +41,18 @@ describe("navigation per access group", () => {
   it("admin sees every section", () => {
     assert.deepEqual(ids(admin), ADMIN_SECTIONS.map((s) => s.id));
   });
-  it("staff with all four permissions see management sections but never administrator-only ones", () => {
+  it("staff with every permission see all management sections but never administrator-only ones", () => {
     const all = staff([...ALL_PERMISSION_IDS]);
-    assert.deepEqual(ids(all), ["dashboard", "businesses", "photos", "events", "import"]);
+    assert.deepEqual(
+      [...ids(all)].sort(),
+      ["advertising-reviews", "badges", "benefits", "businesses", "dashboard", "edit-requests", "events", "import", "photos", "sponsorship-approvals", "users", "verification"],
+    );
+    for (const adminOnly of ["staff", "categories", "plans", "subscriptions", "ad-products", "campaigns", "payments", "reports", "settings"]) {
+      assert.ok(!ids(all).includes(adminOnly as never), adminOnly);
+    }
+  });
+  it("reviewer-style staff only get the review queues they were granted", () => {
+    assert.deepEqual([...ids(staff(["edits.review", "verification.review", "badges.manage"]))].sort(), ["badges", "dashboard", "edit-requests", "verification"]);
   });
   it("limited staff see only the dashboard plus what they were granted", () => {
     assert.deepEqual(ids(staff(["photos.upload"])), ["dashboard", "photos"]);
@@ -95,17 +104,23 @@ describe("route protection", () => {
 });
 
 describe("permissions registry", () => {
-  it("only offers Phase 1 permissions and drops future/unknown ones", () => {
-    assert.deepEqual([...ALL_PERMISSION_IDS].sort(), ["businesses.manage", "csv.import", "events.manage", "photos.upload"]);
+  it("offers every grantable permission and drops unknown ones", () => {
+    assert.deepEqual([...ALL_PERMISSION_IDS].sort(), [
+      "advertising.review", "badges.manage", "benefits.manage", "businesses.manage", "csv.import", "edits.review", "events.manage",
+      "photos.upload", "sponsorships.review", "users.manage", "verification.review",
+    ]);
     assert.deepEqual(sanitizePermissions(["events.manage", "orders.manage", "appointments.manage", "resources.manage", "nope"]), ["events.manage"]);
+  });
+  it("every permission unlocks at least one section, so none is a dead switch", () => {
+    for (const p of ALL_PERMISSION_IDS) assert.ok(ADMIN_SECTIONS.some((s) => s.requires.kind === "permission" && s.requires.permission === p), p);
   });
 });
 
 describe("post-login routing", () => {
-  it("sends back-office users to the dashboard and members to the directory", () => {
+  it("sends back-office users to the admin dashboard and members to their own dashboard", () => {
     assert.equal(homePathFor(admin), "/admin");
     assert.equal(homePathFor(staff([])), "/admin");
-    assert.equal(homePathFor(member), "/directory");
+    assert.equal(homePathFor(member), "/dashboard");
   });
   it("only follows same-site relative `next` paths", () => {
     assert.equal(safeNextPath("/admin/events"), "/admin/events");

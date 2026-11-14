@@ -6,11 +6,15 @@ import { PageHeader } from "./page-header";
 import { Switch } from "@/components/ui/switch";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { settingsService } from "@/services/settings-service";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { resetAllDemoData } from "@/services/demo-reset";
 
 export function SettingsForm() {
   const settings = useSiteSettings();
   const [saving, setSaving] = useState(false);
   const switchId = useId();
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function toggleGoogle(next: boolean) {
     setSaving(true);
@@ -46,6 +50,24 @@ export function SettingsForm() {
           />
         </div>
       </section>
+      <section aria-labelledby="demo-settings-h" className="mt-6 max-w-2xl rounded-lg border bg-card p-5 shadow-card sm:p-6">
+        <h2 id="demo-settings-h" className="text-lg font-semibold text-olive-950">Demo data</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Everything you change in this preview — listings, plans, requests, badges, campaigns — is stored in this browser only. Reset to start again from the original sample data.
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => setConfirmReset(true)}>Reset demo data</Button>
+      </section>
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        destructive
+        title="Reset all demo data?"
+        description="Every change made in this browser is discarded and the original sample data comes back. You stay signed in."
+        confirmLabel="Reset demo data"
+        busyLabel="Resetting…"
+        successMessage="Demo data restored"
+        onConfirm={() => resetAllDemoData()}
+      />
     </>
   );
 }

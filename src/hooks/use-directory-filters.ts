@@ -24,6 +24,8 @@ export function useDirectoryFilters() {
       category: params.get("category") ?? "",
       branch: params.get("branch") ?? "",
       minRating: Number(params.get("rating") ?? 0) || 0,
+      badges: (params.get("badges") ?? "").split(",").filter(Boolean),
+      hiring: params.get("hiring") === "1",
       sort: sort && SORTS.includes(sort) ? sort : defaultFilters.sort,
     };
   });
@@ -51,6 +53,8 @@ export function useDirectoryFilters() {
     if (filters.category) sp.set("category", filters.category);
     if (filters.branch) sp.set("branch", filters.branch);
     if (filters.minRating) sp.set("rating", String(filters.minRating));
+    if (filters.badges.length) sp.set("badges", filters.badges.join(","));
+    if (filters.hiring) sp.set("hiring", "1");
     if (filters.sort !== "featured") sp.set("sort", filters.sort);
     if (view !== "grid") sp.set("view", view);
     if (page > 1) sp.set("page", String(page));

@@ -4,6 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
+import { BadgeRow } from "@/components/badges/business-badge";
+import { HiringChip } from "@/components/business/hiring-toggle";
+import { SponsoredLabel } from "@/components/sponsorship/placements";
 import { RatingStars } from "@/components/shared/rating-stars";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -14,10 +17,12 @@ interface Props {
   variant?: "grid" | "list";
   active?: boolean;
   priority?: boolean;
+  /** Paid placement — must carry the "Sponsored" label. */
+  sponsored?: boolean;
   onHover?: (id: string | null) => void;
 }
 
-export function BusinessCard({ business: b, variant = "grid", active, priority, onHover }: Props) {
+export function BusinessCard({ business: b, variant = "grid", active, priority, sponsored, onHover }: Props) {
   const { categoryById } = useCategories();
   const category = categoryById(b.category);
   const list = variant === "list";
@@ -56,7 +61,9 @@ export function BusinessCard({ business: b, variant = "grid", active, priority, 
             {category.name}
           </span>
         )}
-        {b.featured && (
+        {sponsored ? (
+          <span className="absolute right-3 top-3"><SponsoredLabel className="bg-white/95 shadow-sm" /></span>
+        ) : b.featured && (
           <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-sm bg-brass px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-white shadow-sm">
             Featured
           </span>
@@ -75,6 +82,7 @@ export function BusinessCard({ business: b, variant = "grid", active, priority, 
             {b.city}, {b.state}
           </span>
         </p>
+        <BadgeRow businessId={b.id} max={3} className="mt-2.5" leading={b.hiring ? <HiringChip hiring /> : undefined} />
         <p className={cn("mt-3 text-sm leading-relaxed text-foreground/80", list ? "line-clamp-3" : "line-clamp-2")}>
           {b.tagline} {list && b.description.split("\n")[0].slice(0, 140)}
         </p>

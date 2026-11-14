@@ -58,6 +58,12 @@ export const userService = {
     });
   },
 
+  /** Business Owners (and anyone who only needs a rename) — no account-type fields involved. */
+  async updateName(id: string, name: string): Promise<AppUser> {
+    await delay(400);
+    return patch(id, { name: name.trim() });
+  },
+
   async setStatus(id: string, status: AppUser["status"]): Promise<AppUser> {
     await delay(300);
     const target = userStore.getSnapshot().find((u) => u.id === id);
