@@ -1,4 +1,7 @@
-/** Business badges and the verification workflow. Membership never grants a badge. */
+/**
+ * Business badges and the verification workflow. Badges are granted by staff review — except badge types an
+ * admin marks `autoForPaidPlans` (by default only "Verified Business", per the client's 2026-11 update).
+ */
 
 export type BadgeIconKey = "shield-check" | "medal" | "handshake" | "siren" | "percent" | "star" | "flag" | "award";
 export type BadgeTone = "olive" | "brass" | "sand" | "slate" | "red";
@@ -14,6 +17,8 @@ export interface BusinessBadge {
   active: boolean;
   requiresDocuments: boolean;
   sortOrder: number;
+  /** Held automatically by every business on an active paid business plan (no review). */
+  autoForPaidPlans?: boolean;
 }
 
 export type BadgeAssignmentStatus = "active" | "revoked";
@@ -29,6 +34,8 @@ export interface BadgeAssignment {
   revokedOn?: string;
   revokedBy?: string;
   revokedReason?: string;
+  /** Staff switched the badge off without revoking it (hidden publicly, easy to turn back on). */
+  hidden?: boolean;
 }
 
 export type BadgeRequestStatus = "pending" | "approved" | "rejected";

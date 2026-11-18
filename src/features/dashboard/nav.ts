@@ -1,6 +1,6 @@
 import {
   Award, BadgeCheck, BarChart3, Bookmark, Briefcase, CalendarClock, CalendarDays, CreditCard, FileEdit, GraduationCap,
-  HandCoins, HeartHandshake, Landmark, LayoutDashboard, Megaphone, Percent, Receipt, Settings, Share2, Store, UserCheck, Calculator,
+  HandCoins, HeartHandshake, Images, MapPinned, ShoppingBag, Landmark, LayoutDashboard, Megaphone, Percent, Receipt, Settings, Share2, Store, UserCheck, Calculator,
   type LucideIcon,
 } from "lucide-react";
 import type { AppUser, PlanAudience } from "@/types";
@@ -49,28 +49,35 @@ const membership: DashboardNavItem = { label: "My Membership", href: "/dashboard
 const saved: DashboardNavItem = { label: "Saved Businesses", href: "/dashboard/saved", icon: Bookmark };
 const events: DashboardNavItem = { label: "Events", href: "/events", icon: CalendarDays, publicPage: true };
 const career: DashboardNavItem = { label: "Career Resources", href: "/dashboard/career", icon: Briefcase };
+const nearMe: DashboardNavItem = { label: "Near Me", href: "/dashboard/near-me", icon: MapPinned };
+const services: DashboardNavItem = { label: "Services", href: "/dashboard/services", icon: ShoppingBag };
 
 export const MEMBER_NAV: Record<MemberPersona, DashboardNavItem[]> = {
   veteran: [
     overview,
     membership,
     { label: "Benefits Directory", href: "/dashboard/benefits", icon: Landmark },
+    nearMe,
     saved,
     events,
     { label: "Financial Tools", href: "/dashboard/financial", icon: Calculator },
     career,
     { label: "Appointments", href: "/dashboard/appointments", icon: CalendarClock },
+    services,
     settings,
   ],
   civilian: [
     overview,
     membership,
     { label: "Business Directory", href: "/directory", icon: Store, publicPage: true },
+    nearMe,
     saved,
     { label: "Community Resources", href: "/dashboard/community", icon: HeartHandshake },
     events,
     career,
     { label: "Financial Education", href: "/dashboard/financial-education", icon: GraduationCap },
+    { label: "Appointments", href: "/dashboard/appointments", icon: CalendarClock },
+    services,
     settings,
   ],
   business_owner: [
@@ -78,6 +85,7 @@ export const MEMBER_NAV: Record<MemberPersona, DashboardNavItem[]> = {
     { label: "My Businesses", href: "/dashboard/businesses", icon: Store },
     { label: "Business Memberships", href: "/dashboard/memberships", icon: CreditCard },
     { label: "Edit Requests", href: "/dashboard/edit-requests", icon: FileEdit },
+    { label: "Photos & Categories", href: "/dashboard/media", icon: Images },
     { label: "Badges & Verification", href: "/dashboard/badges", icon: Award },
     { label: "Business Analytics", href: "/dashboard/analytics", icon: BarChart3 },
     { label: "Social Media Links", href: "/dashboard/social-links", icon: Share2 },
@@ -85,6 +93,7 @@ export const MEMBER_NAV: Record<MemberPersona, DashboardNavItem[]> = {
     { label: "Discounts & Promotions", href: "/dashboard/promotions", icon: Percent },
     { label: "Advertisements", href: "/dashboard/advertising", icon: Megaphone },
     { label: "Sponsorships", href: "/dashboard/sponsorships", icon: HandCoins },
+    { label: "Business Services", href: "/dashboard/business-services", icon: ShoppingBag },
     { label: "Payment History", href: "/dashboard/payments", icon: Receipt },
     settings,
   ],

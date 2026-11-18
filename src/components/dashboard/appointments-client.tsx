@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarClock, Loader2, Phone, UsersRound, Video } from "lucide-react";
+import { CalendarClock, Info, Loader2, Phone, UsersRound, Video } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/admin/page-header";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
@@ -23,7 +24,18 @@ import { useStore } from "@/hooks/use-store";
 import { daysFromToday, formatDate, formatTime } from "@/lib/date";
 import { APPOINTMENT_TOPICS, appointmentSchema, type AppointmentFormValues } from "@/schemas/member";
 import { appointmentService, appointmentStore, appointmentsInMonth } from "@/services/member-service";
-import type { Appointment, AppointmentStatus } from "@/types";
+import type { Appointment, AppointmentContext, AppointmentStatus } from "@/types";
+
+const CONTEXT_KINDS = ["benefit", "freebie", "offer", "service"] as const;
+
+/** Reads the context passed by a "Schedule an Appointment for Assistance" button (`?topic=&ref=kind:id&about=`). */
+function contextFromParams(params: URLSearchParams): { topic: string; context?: AppointmentContext } {
+  const topic = params.get("topic") ?? "";
+  const [kind, id] = (params.get("ref") ?? "").split(":");
+  const title = params.get("about") ?? "";
+  const context = (CONTEXT_KINDS as readonly string[]).includes(kind) && id && title ? { kind: kind as AppointmentContext["kind"], id, title: title.slice(0, 140) } : undefined;
+  return { topic: (APPOINTMENT_TOPICS as readonly string[]).includes(topic) ? topic : "", context };
+}
 
 const MODE_ICON = { phone: Phone, video: Video, in_person: UsersRound } as const;
 const MODE_LABEL = { phone: "Phone call", video: "Video call", in_person: "In person" } as const;
@@ -31,7 +43,11 @@ const statusTone: Record<AppointmentStatus, Tone> = { requested: "warn", confirm
 
 export function AppointmentsClient() {
   const user = useSession();
-  const plan = useResolvedPlan("veteran", user?.id);
+  // Veteran and Civilian members both book here; each uses their own plan's allowance.
+  const audience = user?.userType === "civilian" ? "civilian" : "veteran";
+  const plan = useResolvedPlan(audience, user?.id);
+  const params = useSearchParams();
+  const [prefill, setPrefill] = useState(() => contextFromParams(new URLSearchParams(params.toString())));
   const plans = useAllPlans();
   const all = useStore(appointmentStore);
   const [toCancel, setToCancel] = useState<Appointment | null>(null);
@@ -40,20 +56,24 @@ export function AppointmentsClient() {
   const thisMonth = daysFromToday(0).slice(0, 7);
   const used = user ? appointmentsInMonth(all, user.id, thisMonth) : 0;
   const limit = limitOf(plan, "appointments");
-  const upgrade = cheapestPlanWith(plans, "veteran", "appointments");
+  const upgrade = cheapestPlanWith(plans, audience, "appointments");
 
   const {
     register, handleSubmit, reset,
     formState: { errors, isSubmitting },
-  } = useForm<AppointmentFormValues>({ resolver: zodResolver(appointmentSchema), defaultValues: { topic: "", mode: "video", date: "", time: "", notes: "" } });
+  } = useForm<AppointmentFormValues>({
+    resolver: zodResolver(appointmentSchema),
+    defaultValues: { topic: prefill.topic, mode: "video", date: "", time: "", notes: prefill.context ? `About: ${prefill.context.title}` : "" },
+  });
 
   if (!user) return null;
 
   async function onSubmit(v: AppointmentFormValues) {
     try {
-      await appointmentService.request(user!.id, v, limit);
-      toast.success("Appointment requested", { description: "An advisor will confirm by email." });
+      await appointmentService.request(user!.id, { ...v, context: prefill.context }, limit);
+      toast.success("Appointment requested", { description: "One of our team will confirm a time. (Demo — no email is sent.)" });
       reset({ topic: "", mode: "video", date: "", time: "", notes: "" });
+      setPrefill({ topic: "" });
     } catch (e) {
       toast.error("Couldn't request the appointment", { description: e instanceof Error ? e.message : undefined });
     }
@@ -91,6 +111,12 @@ export function AppointmentsClient() {
             <UpgradePrompt featureLabel="Advisor appointments" requiredPlan={upgrade?.name} href="/dashboard/membership" />
           ) : (
             <Panel title="Request an appointment">
+              {prefill.context && (
+                <p className="mb-4 flex items-start gap-2 rounded-md border border-olive-200 bg-olive-50 px-3 py-2 text-sm text-olive-900">
+                  <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+                  <span>Requesting help with <strong>{prefill.context.title}</strong>.</span>
+                </p>
+              )}
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
                 <FormField label="Topic" htmlFor="ap-topic" error={errors.topic?.message} required>
                   <NativeSelect id="ap-topic" aria-invalid={!!errors.topic} aria-describedby={describedBy("ap-topic", errors.topic?.message)} {...register("topic")}>
@@ -155,6 +181,7 @@ function AppointmentList({ title, items, onCancel }: { title: string; items: App
               <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-olive-100 text-olive-700"><Icon className="size-4" aria-hidden /></span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-olive-950">{a.topic}</p>
+                {a.context && <p className="text-xs text-muted-foreground">About: {a.context.title}</p>}
                 <p className="text-sm text-muted-foreground">{formatDate(a.date)} · {formatTime(a.time)} · {MODE_LABEL[a.mode]}</p>
               </div>
               <StatusPill tone={statusTone[a.status]} className="capitalize">{a.status}</StatusPill>

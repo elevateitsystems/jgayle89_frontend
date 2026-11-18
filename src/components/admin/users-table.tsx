@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminMemberLink } from "@/components/admin/entity-links";
+import { MemberIdentityBadges } from "@/components/account/member-identity";
 import { useMemo, useState } from "react";
 import { Ban, CheckCircle2, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -149,7 +151,7 @@ export function UsersTable() {
               {rows.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="pl-4">
-                    <span className="block max-w-[14rem] truncate font-semibold text-olive-950 sm:max-w-xs">{u.name}</span>
+                    <span className="block max-w-[14rem] truncate sm:max-w-xs"><AdminMemberLink userId={u.id} name={u.name} /></span>
                     <span className="block max-w-[14rem] truncate text-xs text-muted-foreground sm:max-w-xs">{u.email}</span>
                     <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">
                       {u.userType ? USER_TYPE_LABEL[u.userType] : "—"}
@@ -158,6 +160,7 @@ export function UsersTable() {
                   <TableCell className="hidden sm:table-cell">
                     {u.userType ? USER_TYPE_LABEL[u.userType] : "—"}
                     {u.branch && <span className="block text-xs text-muted-foreground">{u.branch}</span>}
+                    <MemberIdentityBadges user={u} className="mt-1" />
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">{formatDate(u.createdAt)}</TableCell>
                   <TableCell><StatusBadge status={u.status} /></TableCell>

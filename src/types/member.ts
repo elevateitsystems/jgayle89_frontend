@@ -10,9 +10,17 @@ export interface SavedBusiness {
 export type AppointmentStatus = "requested" | "confirmed" | "completed" | "cancelled";
 export type AppointmentMode = "phone" | "video" | "in_person";
 
+/** What an assistance appointment is about (the "Schedule an Appointment for Assistance" buttons). */
+export interface AppointmentContext {
+  kind: "benefit" | "freebie" | "offer" | "service";
+  id: string;
+  title: string;
+}
+
 export interface Appointment {
   id: string;
   userId: string;
+  /** The service type, e.g. "Benefit assistance" (used by the admin appointment reports). */
   topic: string;
   mode: AppointmentMode;
   date: string; // ISO date
@@ -20,6 +28,10 @@ export interface Appointment {
   notes: string;
   status: AppointmentStatus;
   createdAt: string; // ISO datetime
+  /** Staff AppUser.id handling the request. */
+  assignedTo?: string;
+  context?: AppointmentContext;
+  updatedAt?: string;
 }
 
 export type ResourceKind = "community" | "career" | "financial-tool" | "financial-education";

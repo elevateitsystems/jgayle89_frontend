@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
+  PlayCircle,
   Percent,
   Share2,
   CalendarDays,
@@ -26,7 +27,7 @@ import { HiringChip } from "@/components/business/hiring-toggle";
 import { SocialLinksList } from "@/components/business/social-links";
 import { StatusPill } from "@/components/dashboard/status-pill";
 import { useBusinessBadges } from "@/features/badges/hooks";
-import { todayISO, formatDate } from "@/lib/date";
+import { formatDate } from "@/lib/date";
 import { BusinessAvatar } from "@/components/shared/monogram";
 import { DemoNotice } from "@/components/shared/demo-notice";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -38,6 +39,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { useBusiness, usePublicBusinesses } from "@/hooks/use-businesses";
 import { useCategories } from "@/hooks/use-categories";
 import { useGoogleRating } from "@/hooks/use-google-rating";
+import { embedUrl, mediaAllowance, visibleMedia } from "@/features/business/media";
+import { useResolvedPlan } from "@/features/membership/hooks";
+import { useLiveOffers } from "@/features/offers/hooks";
+import { OFFER_AUDIENCE_LABEL } from "@/features/offers/rules";
+import { OfferCountdown } from "@/components/offers/offer-ui";
 import { useBusinessReviews } from "@/hooks/use-reviews";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { shouldShowGoogleRating } from "@/lib/ratings";
@@ -51,6 +57,10 @@ export function BusinessDetail({ slug }: { slug: string }) {
   const reviews = useBusinessReviews(b?.id);
   const { google, loading: googleLoading } = useGoogleRating(b);
   const badges = useBusinessBadges(b?.id);
+  // Business offers come from the approval workflow (client update §4C): only Published, unexpired offers show.
+  const activePromos = useLiveOffers(b?.id);
+  // Photos & videos follow the business's plan (client update §4A) — Free shows the profile/logo image only.
+  const plan = useResolvedPlan("business", b?.id);
 
   const related = useMemo(() => {
     if (!b) return [];
@@ -77,15 +87,22 @@ export function BusinessDetail({ slug }: { slug: string }) {
   }
 
   const category = categoryById(b.category);
-  const activePromos = (b.promotions ?? []).filter((p) => !p.validUntil || p.validUntil >= todayISO());
   const fullAddress = `${b.address}, ${b.city}, ${b.state} ${b.zip}`;
   const directionsHref = `https://www.openstreetmap.org/directions?to=${b.lat}%2C${b.lng}`;
+  const media = visibleMedia(b, mediaAllowance(plan, b));
+  const alsoIn = [...(b.secondaryCategories ?? []), ...(b.subcategories ?? [])]
+    .map((id) => categoryById(id))
+    .filter((c): c is NonNullable<typeof c> => !!c && c.active !== false);
 
   return (
     <>
       {/* Cover */}
-      <div className="relative h-56 w-full bg-olive-900 sm:h-72 lg:h-96">
-        <Image src={b.coverImage} alt={`${b.name} cover`} fill priority sizes="100vw" className="object-cover" />
+      <div className={cn("relative w-full bg-olive-900", media.cover ? "h-56 sm:h-72 lg:h-96" : "h-40 sm:h-48")}>
+        {media.cover ? (
+          <Image src={media.cover} alt={`${b.name} cover`} fill priority sizes="100vw" className="object-cover" unoptimized={media.cover.startsWith("data:")} />
+        ) : (
+          <div className="topo-bg absolute inset-0 opacity-20" aria-hidden />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-olive-950/70 via-olive-950/10 to-olive-950/30" />
         <div className="container-page relative flex h-full items-start pt-5">
           <Link
@@ -132,9 +149,23 @@ export function BusinessDetail({ slug }: { slug: string }) {
                   <MapPin className="size-4 text-olive-600" aria-hidden /> {b.city}, {b.state}
                 </span>
                 <span className="inline-flex items-center gap-1.5 font-medium text-olive-700">
-                  <BadgeCheck className="size-4" aria-hidden /> Veteran-owned · {b.branch}
+                  <BadgeCheck className="size-4" aria-hidden /> {b.listingKind === "veteran_friendly" ? "Veteran-friendly business" : `Veteran-owned · ${b.branch}`}
                 </span>
               </div>
+              {alsoIn.length > 0 && (
+                <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Categories and subcategories">
+                  {alsoIn.map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        href={c.parentId ? `/directory?category=${c.parentId}&sub=${c.id}` : `/directory?category=${c.id}`}
+                        className="inline-flex items-center rounded-full border border-sand-300 bg-sand-50 px-2.5 py-0.5 text-xs font-medium text-olive-900 hover:bg-olive-50"
+                      >
+                        {c.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
               <a href={`tel:${b.phone}`} className={cn(buttonVariants({ size: "lg" }))}>
@@ -161,6 +192,44 @@ export function BusinessDetail({ slug }: { slug: string }) {
               </div>
             </section>
 
+            {media.gallery.length > 0 && (
+              <section aria-labelledby="gallery-h">
+                <h2 id="gallery-h" className="text-2xl font-semibold text-olive-950">Gallery</h2>
+                <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {media.gallery.map((src, i) => (
+                    <li key={`${src}-${i}`} className="relative aspect-[4/3] overflow-hidden rounded-md bg-sand-200">
+                      <Image src={src} alt={`${b.name} photo ${i + 1}`} fill sizes="(min-width: 1024px) 260px, 45vw" className="object-cover" unoptimized={src.startsWith("data:")} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {media.videos.length > 0 && (
+              <section aria-labelledby="videos-h">
+                <h2 id="videos-h" className="text-2xl font-semibold text-olive-950">Videos</h2>
+                <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {media.videos.map((v) => {
+                    const embed = embedUrl(v.url);
+                    return (
+                      <li key={v.id} className="overflow-hidden rounded-md border bg-white">
+                        {embed ? (
+                          <iframe src={embed} title={v.title} className="aspect-video w-full" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen />
+                        ) : (
+                          <a href={v.url} target="_blank" rel="noopener noreferrer" className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-olive-900 text-olive-50 hover:bg-olive-800">
+                            <PlayCircle className="size-10" aria-hidden />
+                            <span className="text-sm font-semibold">Watch video</span>
+                            <span className="sr-only"> (opens in a new tab)</span>
+                          </a>
+                        )}
+                        <p className="px-3 py-2 text-sm font-medium text-olive-950">{v.title}</p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
             {b.services.length > 0 && (
               <section aria-labelledby="services-h">
                 <h2 id="services-h" className="text-2xl font-semibold text-olive-950">Services</h2>
@@ -186,7 +255,8 @@ export function BusinessDetail({ slug }: { slug: string }) {
                       <div className="flex flex-wrap items-center gap-2"><StatusPill tone="warn"><Percent className="size-3" aria-hidden /> {p.discountText}</StatusPill></div>
                       <p className="mt-2 font-semibold text-olive-950">{p.title}</p>
                       <p className="text-sm text-muted-foreground">{p.description}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{p.audience === "veterans" ? "For veterans & military" : p.audience === "first_responders" ? "For first responders" : "For everyone"}{p.validUntil ? ` · until ${formatDate(p.validUntil)}` : ""}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{OFFER_AUDIENCE_LABEL[p.audience]}{p.expiresOn ? ` · until ${formatDate(p.expiresOn)}` : ""}</p>
+                      {p.expiresOn && <OfferCountdown expiresOn={p.expiresOn} className="mt-2" />}
                     </li>
                   ))}
                 </ul>
@@ -196,7 +266,7 @@ export function BusinessDetail({ slug }: { slug: string }) {
             {badges.length > 0 && (
               <section aria-labelledby="badges-h">
                 <h2 id="badges-h" className="text-2xl font-semibold text-olive-950">Badges</h2>
-                <p className="mt-2 text-sm text-muted-foreground">Badges are verified by Mission: SITREP staff — they are never part of a paid plan.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Badges are verified by Mission: SITREP staff. “Verified Business” is also included with paid business memberships.</p>
                 <div className="mt-4"><BadgeDetailList businessId={b.id} /></div>
               </section>
             )}

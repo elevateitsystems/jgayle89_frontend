@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Info } from "lucide-react";
+import { AssistanceButton } from "@/components/membership/assistance-button";
+import { EmptyState } from "@/components/shared/empty-state";
+import { usePublicBenefits } from "@/features/benefits/hooks";
+import { useHydrated } from "@/hooks/use-store";
 import { CategoryBadge, DataStatusBadge, ScopeBadge } from "./benefit-badges";
 import { buttonVariants } from "@/components/ui/button";
 import { stateName } from "@/data/us-states";
@@ -71,6 +77,7 @@ export function BenefitDetail({ benefit: b }: { benefit: Benefit }) {
                   Apply / get started <ExternalLink />
                 </a>
               )}
+              <AssistanceButton context={{ kind: "benefit", id: b.id, title: b.title }} />
             </div>
             <dl className="mt-5 space-y-3 border-t border-sand-200 pt-4 text-sm">
               <div>
@@ -87,4 +94,25 @@ export function BenefitDetail({ benefit: b }: { benefit: Benefit }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Resolves the program from the live catalogue so staff edits, additions and removals apply. The statically known
+ * record (if any) renders on the server and during hydration.
+ */
+export function BenefitDetailBySlug({ slug, initial }: { slug: string; initial?: Benefit }) {
+  const hydrated = useHydrated();
+  const live = usePublicBenefits().find((b) => b.slug === slug);
+  const benefit = hydrated ? live : initial;
+  if (!benefit) {
+    if (!hydrated) return null;
+    return (
+      <div className="container-page py-16">
+        <EmptyState title="Program not found" description="This program may have been removed or is no longer active.">
+          <Link href="/benefits" className={cn(buttonVariants(), "mt-6")}>Back to the Benefits Directory</Link>
+        </EmptyState>
+      </div>
+    );
+  }
+  return <BenefitDetail benefit={benefit} />;
 }

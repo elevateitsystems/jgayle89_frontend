@@ -6,6 +6,7 @@ import { LockKeyhole, ShieldAlert, UserRoundX, type LucideIcon } from "lucide-re
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/use-session";
+import { useRegistrationOpen } from "@/hooks/use-settings";
 import { useHydrated } from "@/hooks/use-store";
 import type { AccessState } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ const loginHref = (pathname: string) => `/login?next=${encodeURIComponent(pathna
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const user = useSession();
+  const registrationOpen = useRegistrationOpen();
   const hydrated = useHydrated();
   if (!hydrated) return <GateSkeleton />;
   if (!user) {
@@ -59,10 +61,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
       <Notice
         icon={LockKeyhole}
         title="Sign in to continue"
-        description="This page is for registered members. Sign in or create a free account."
+        description={registrationOpen ? "This page is for registered members. Sign in or create a free account." : "This page is for registered members. Please sign in."}
         actions={[
           { href: loginHref(pathname), label: "Sign in", primary: true },
-          { href: "/register", label: "Create an account" },
+          ...(registrationOpen ? [{ href: "/register", label: "Create an account" }] : []),
         ]}
       />
     );

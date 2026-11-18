@@ -1,6 +1,9 @@
 import { adService } from "@/services/ad-service";
 import { badgeService } from "@/services/badge-service";
-import { benefitOverrideStore } from "@/services/benefit-admin-service";
+import { benefitOverrideStore, customBenefitStore } from "@/services/benefit-admin-service";
+import { auditService } from "@/services/audit-service";
+import { marketplaceService } from "@/services/marketplace-service";
+import { freebieService, offerService } from "@/services/offer-service";
 import { businessService } from "@/services/business-service";
 import { categoryService } from "@/services/category-service";
 import { editRequestService } from "@/services/edit-request-service";
@@ -29,4 +32,9 @@ export function resetAllDemoData() {
   benefitOverrideStore.reset();
   savedStore.reset();
   appointmentStore.reset();
+  customBenefitStore.reset();
+  freebieService.reset();
+  offerService.reset();
+  marketplaceService.reset();
+  auditService.reset();
 }

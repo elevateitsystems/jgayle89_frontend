@@ -19,6 +19,12 @@ export const EDITABLE_FIELDS: { key: EditableFieldKey; label: string; multiline?
   { key: "zip", label: "ZIP code" },
   { key: "socialLinks", label: "Social media links" },
   { key: "promotions", label: "Discounts & promotions" },
+  { key: "secondaryCategories", label: "Additional categories" },
+  { key: "subcategories", label: "Subcategories" },
+  { key: "coverImage", label: "Cover image" },
+  { key: "profileImage", label: "Profile / logo image" },
+  { key: "gallery", label: "Gallery photos" },
+  { key: "videos", label: "Videos" },
 ];
 
 export const fieldLabel = (key: EditableFieldKey) => EDITABLE_FIELDS.find((f) => f.key === key)?.label ?? key;
@@ -30,6 +36,8 @@ export function editableSnapshot(b: Business): EditableBusinessFields {
     phone: b.phone, email: b.email, website: b.website, hours: b.hours,
     address: b.address, city: b.city, state: b.state, zip: b.zip,
     socialLinks: b.socialLinks ?? [], promotions: b.promotions ?? [],
+    secondaryCategories: b.secondaryCategories ?? [], subcategories: b.subcategories ?? [],
+    coverImage: b.coverImage, profileImage: b.profileImage ?? "", gallery: b.gallery ?? [], videos: b.videos ?? [],
   };
 }
 
@@ -54,6 +62,17 @@ export function describeValue(key: EditableFieldKey, value: unknown): string {
   if (key === "socialLinks") {
     const links = value as { platform: string; url: string; label?: string }[];
     return links.length ? links.map((l) => `${l.label || l.platform}: ${l.url}`).join("\n") : "—";
+  }
+  if (key === "secondaryCategories" || key === "subcategories") {
+    const ids = value as string[];
+    // Ids are readable slugs; strip the "sub-" prefix for display.
+    return ids.length ? ids.map((id) => id.replace(/^sub-/, "").replace(/-/g, " ")).join(", ") : "—";
+  }
+  if (key === "coverImage" || key === "profileImage") return String(value).startsWith("data:") ? "New uploaded image" : String(value);
+  if (key === "gallery") return `${(value as string[]).length} photo(s)`;
+  if (key === "videos") {
+    const vids = value as { title: string; url: string }[];
+    return vids.length ? vids.map((v) => `${v.title}: ${v.url}`).join("\n") : "—";
   }
   if (key === "promotions") {
     const promos = value as { title: string; discountText: string }[];

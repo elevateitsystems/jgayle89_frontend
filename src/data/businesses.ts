@@ -1,5 +1,6 @@
 import type { Business } from "@/types";
 import { businessExtras } from "../lib/mock-data/business-extras.ts";
+import { businessStructure } from "../lib/mock-data/business-structure.ts";
 
 /**
  * DEMO DATA — every business below is fictional. Ratings, review counts,
@@ -546,6 +547,59 @@ const seeds: Seed[] = [
     coverImage: "/images/barber.jpg",
     createdAt: "2026-11-02",
   },
+  // ── Veteran-FRIENDLY (not veteran-owned) sample listings, added for the Near Me finder (client update §3) ──
+  {
+    slug: "cape-fear-hardware-supply",
+    name: "Cape Fear Hardware & Supply (sample)",
+    category: "home-real-estate",
+    tagline: "A veteran-friendly neighborhood hardware store.",
+    description:
+      "A sample veteran-friendly listing: a local hardware store that supports the military community with a standing military discount and a weekly veterans' coffee hour. It is not veteran-owned.",
+    services: ["Hardware & tools", "Key cutting", "Military discount"],
+    keywords: ["hardware", "tools", "supplies", "veteran-friendly"],
+    address: "410 Skibo Road",
+    city: "Fayetteville",
+    state: "NC",
+    zip: "28303",
+    lat: 35.0746,
+    lng: -78.9586,
+    phone: "(555) 010-0132",
+    email: "hello@capefearhardware.example",
+    website: "https://capefearhardware.example",
+    rating: 4.6,
+    reviewCount: 58,
+    branch: "Army",
+    yearFounded: 2004,
+    hours: "Mon–Sat 7a–7p · Sun 9a–5p",
+    coverImage: "/images/workshop-team.jpg",
+    createdAt: "2026-11-04",
+  },
+  {
+    slug: "front-range-family-dental",
+    name: "Front Range Family Dental (sample)",
+    category: "personal-services",
+    tagline: "Veteran-friendly family dentistry.",
+    description:
+      "A sample veteran-friendly listing: a family dental practice that offers flexible scheduling for military families and accepts common military dental plans. It is not veteran-owned.",
+    services: ["Family dentistry", "Military dental plans", "Same-week appointments"],
+    keywords: ["dentist", "dental", "family", "veteran-friendly"],
+    address: "2150 N Academy Boulevard",
+    city: "Colorado Springs",
+    state: "CO",
+    zip: "80909",
+    lat: 38.8645,
+    lng: -104.7605,
+    phone: "(555) 010-0133",
+    email: "smile@frontrangedental.example",
+    website: "https://frontrangedental.example",
+    rating: 4.8,
+    reviewCount: 74,
+    branch: "Army",
+    yearFounded: 2011,
+    hours: "Mon–Fri 8a–5p",
+    coverImage: "/images/office.jpg",
+    createdAt: "2026-11-10",
+  },
 ];
 
 export const businesses: Business[] = seeds.map((s, i) => ({
@@ -558,4 +612,7 @@ export const businesses: Business[] = seeds.map((s, i) => ({
   socialLinks: [],
   promotions: [],
   ...businessExtras[s.slug],
+  // Categories/subcategories, gallery, videos and "added by" (client update §4A, §7B, §11).
+  listingKind: "veteran_owned",
+  ...businessStructure[s.slug],
 }));

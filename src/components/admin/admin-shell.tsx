@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import {
   Award, BadgeCheck, BarChart3, CalendarDays, CreditCard, FileEdit, FileUp, HandCoins, Images, Landmark, LayoutDashboard,
-  Megaphone, Receipt, Settings, ShieldCheck, Store, Tags, UserCog, Users, Wallet, type LucideIcon,
+  Megaphone, Receipt, Settings, ShieldCheck, Store, Tags, UserCog, Users, Wallet, Gift, Percent, ShoppingBag, ClipboardList,
+  CalendarCheck, LineChart, History, type LucideIcon,
 } from "lucide-react";
 import { AccessDenied } from "@/components/auth/access-gate";
 import { AppShell, type ShellNavGroup } from "@/components/dashboard/app-shell";
@@ -36,6 +37,13 @@ const sectionIcon: Record<AdminSectionId, LucideIcon> = {
   payments: Receipt,
   reports: BarChart3,
   settings: Settings,
+  freebies: Gift,
+  "business-offers": Percent,
+  services: ShoppingBag,
+  "service-orders": ClipboardList,
+  appointments: CalendarCheck,
+  "business-analytics": LineChart,
+  activity: History,
 };
 
 function titleFor(pathname: string, user: Parameters<typeof sectionLabel>[0]) {

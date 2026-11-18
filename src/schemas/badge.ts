@@ -8,6 +8,7 @@ export const badgeSchema = z.object({
   tone: z.enum(["olive", "brass", "sand", "slate", "red"]),
   requiresDocuments: z.boolean(),
   active: z.boolean(),
+  autoForPaidPlans: z.boolean(),
 });
 export type BadgeFormValues = z.infer<typeof badgeSchema>;
 

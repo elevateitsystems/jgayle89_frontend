@@ -28,7 +28,7 @@ export function OwnerBadgesPage() {
   const { selected, setId } = useSelectedBusiness(businesses);
   return (
     <>
-      <PageHeader title="Badges & verification" description="Badges are earned through staff review. A paid membership never grants a badge." />
+      <PageHeader title="Badges & verification" description="Badges are earned through staff review. Paid business memberships automatically include “Verified Business”; every other badge needs review." />
       {!loading && businesses.length === 0 ? <NoBusinesses /> : (
         <>
           <BusinessPicker businesses={businesses} value={selected?.id} onChange={setId} />

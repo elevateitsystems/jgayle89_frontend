@@ -1,5 +1,6 @@
 import { users as seed } from "@/data/users";
 import { createCollectionStore, delay } from "@/lib/demo-store";
+import { settingsService } from "@/services/settings-service";
 import { sanitizePermissions } from "@/lib/permissions";
 import { newId } from "@/lib/slug";
 import type { AppUser, Permission, ProfileLike } from "@/types";
@@ -32,6 +33,8 @@ export const userService = {
   /** Public self-registration. Always creates a standard registered user — never staff/admin. */
   async register(input: ProfileLike & { email: string }): Promise<AppUser> {
     await delay(700);
+    // Admin → Settings can pause new public sign-ups; the API must enforce this too.
+    if (!settingsService.get().registrationOpen) throw new Error("New account registration is temporarily closed.");
     if (userService.findByEmail(input.email)) throw new Error("An account with this email already exists.");
     const user: AppUser = {
       id: newId("usr"),
@@ -40,6 +43,9 @@ export const userService = {
       role: "user",
       userType: input.userType,
       branch: input.userType === "veteran" ? input.branch : undefined,
+      military: input.userType === "veteran" ? input.military : undefined,
+      firstResponder: input.firstResponder,
+      location: input.location,
       permissions: [],
       status: "active",
       createdAt: today(),
@@ -55,6 +61,9 @@ export const userService = {
       name: input.name.trim(),
       userType: input.userType,
       branch: input.userType === "veteran" ? input.branch : undefined,
+      military: input.userType === "veteran" ? input.military : undefined,
+      firstResponder: input.firstResponder,
+      location: input.location,
     });
   },
 

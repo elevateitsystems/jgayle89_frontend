@@ -16,7 +16,8 @@ export interface CollectionStore<T> {
 }
 
 /** Bump when seed data changes shape so stale browser copies are discarded (v3: removed the reviewer demo account). */
-const STORAGE_VERSION = "v3";
+// Bumped for the client's 2026-11 update (new plan features, profile fields, offers) so old browser data is re-seeded.
+const STORAGE_VERSION = "v4";
 
 export function createCollectionStore<T>(name: string, seed: T[]): CollectionStore<T> {
   const key = `sitrep:${name}:${STORAGE_VERSION}`;

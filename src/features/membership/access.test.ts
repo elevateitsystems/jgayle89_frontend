@@ -86,16 +86,24 @@ describe("limits and usage", () => {
   it("distinguishes unlimited from not-included from capped", () => {
     assert.equal(limitOf(exec, "business_photos"), null);
     assert.equal(limitOf(free, "promotions"), 0);
-    assert.equal(limitOf(free, "business_photos"), 3);
+    assert.equal(limitOf(free, "business_photos"), 0);
   });
   it("reports when a cap is reached", () => {
-    assert.equal(usageState(free, "business_photos", 3).atLimit, true);
-    assert.equal(usageState(free, "business_photos", 2).remaining, 1);
+    assert.equal(usageState(free, "business_photos", 0).atLimit, true);
+    assert.equal(usageState(free, "business_photos", 0).included, false);
     assert.equal(usageState(exec, "business_photos", 500).atLimit, false);
     assert.equal(usageState(free, "promotions", 0).included, false);
   });
   it("finds the cheapest plan that unlocks a feature", () => {
-    assert.equal(cheapestPlanWith(plans, "business", "analytics_trends")?.name, "Growth");
+    // Client update §7A: analytics only on the two highest business tiers.
+    assert.equal(cheapestPlanWith(plans, "business", "analytics_basic")?.name, "Pro");
+    assert.equal(cheapestPlanWith(plans, "business", "analytics_trends")?.name, "Pro");
+    // §4A: Free = logo only; paid tiers add a cover, gallery and videos.
+    assert.equal(cheapestPlanWith(plans, "business", "cover_image")?.name, "Growth");
+    assert.equal(cheapestPlanWith(plans, "business", "business_videos")?.name, "Growth");
+    // §2: assistance appointments are a paid-member feature.
+    assert.equal(cheapestPlanWith(plans, "veteran", "benefit_assistance")?.name, "Plus");
+    assert.equal(cheapestPlanWith(plans, "civilian", "offer_assistance")?.name, "Plus");
     assert.equal(cheapestPlanWith(plans, "business", "analytics_export")?.name, "Executive");
   });
 });

@@ -1,17 +1,23 @@
 /**
- * Pure badge helpers. IMPORTANT: badges are earned through staff review only. Nothing in the membership
- * or billing code may create an assignment — a paid plan never implies "Verified" or any other badge.
+ * Pure badge helpers. Badges are earned through staff review. The one exception (client update §5): badge types
+ * marked `autoForPaidPlans` — by default only "Verified Business" — are *derived* for businesses on an active paid
+ * plan. No assignment record is created, and every other verification badge still needs staff approval.
  */
 import type { BadgeAssignment, BadgeRequest, BusinessBadge } from "../../types/index.ts";
 
-/** Ids of the badges a business currently holds (revoked assignments don't count). */
+/** Ids of the badges a business currently holds (revoked or switched-off assignments don't count). */
 export function activeBadgeIds(assignments: BadgeAssignment[], businessId: string): string[] {
-  return assignments.filter((a) => a.businessId === businessId && a.status === "active").map((a) => a.badgeId);
+  return assignments.filter((a) => a.businessId === businessId && a.status === "active" && !a.hidden).map((a) => a.badgeId);
+}
+
+/** Badge types a business gets automatically because it's on an active paid plan. */
+export function autoBadgeIds(badges: BusinessBadge[], onPaidPlan: boolean): string[] {
+  return onPaidPlan ? badges.filter((b) => b.autoForPaidPlans).map((b) => b.id) : [];
 }
 
 /** Badges a business holds, in the admin-defined display order. Inactive badge types are hidden publicly. */
-export function badgesFor(badges: BusinessBadge[], assignments: BadgeAssignment[], businessId: string, opts: { includeInactive?: boolean } = {}): BusinessBadge[] {
-  const held = new Set(activeBadgeIds(assignments, businessId));
+export function badgesFor(badges: BusinessBadge[], assignments: BadgeAssignment[], businessId: string, opts: { includeInactive?: boolean; onPaidPlan?: boolean } = {}): BusinessBadge[] {
+  const held = new Set([...activeBadgeIds(assignments, businessId), ...autoBadgeIds(badges, !!opts.onPaidPlan)]);
   return badges.filter((b) => held.has(b.id) && (opts.includeInactive || b.active)).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 

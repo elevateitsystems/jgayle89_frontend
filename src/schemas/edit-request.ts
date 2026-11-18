@@ -4,8 +4,10 @@ export const SOCIAL_PLATFORMS = [
   { id: "facebook", label: "Facebook", host: /(^|\.)facebook\.com$|(^|\.)fb\.com$/i, placeholder: "https://facebook.com/yourbusiness" },
   { id: "instagram", label: "Instagram", host: /(^|\.)instagram\.com$/i, placeholder: "https://instagram.com/yourbusiness" },
   { id: "linkedin", label: "LinkedIn", host: /(^|\.)linkedin\.com$/i, placeholder: "https://linkedin.com/company/yourbusiness" },
+  { id: "tiktok", label: "TikTok", host: /(^|\.)tiktok\.com$/i, placeholder: "https://tiktok.com/@yourbusiness" },
   { id: "youtube", label: "YouTube", host: /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i, placeholder: "https://youtube.com/@yourbusiness" },
-  { id: "website", label: "Other website", host: /.+/, placeholder: "https://example.com/page" },
+  { id: "x", label: "X (Twitter)", host: /(^|\.)x\.com$|(^|\.)twitter\.com$/i, placeholder: "https://x.com/yourbusiness" },
+  { id: "website", label: "Other website or platform", host: /.+/, placeholder: "https://example.com/page" },
 ] as const;
 
 const hostOf = (url: string) => {
@@ -18,7 +20,7 @@ const hostOf = (url: string) => {
 
 export const socialLinkSchema = z
   .object({
-    platform: z.enum(["facebook", "instagram", "linkedin", "youtube", "website"]),
+    platform: z.enum(["facebook", "instagram", "linkedin", "tiktok", "youtube", "x", "website"]),
     url: z.string().trim().min(1, "Enter a URL"),
     label: z.string().trim().max(40, "Keep the name under 40 characters"),
   })

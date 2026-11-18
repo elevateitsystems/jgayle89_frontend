@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { PasswordInput } from "./password-input";
 import { UserTypeFields } from "./user-type-fields";
@@ -14,8 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormField, describedBy } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { BRANCHES, registerSchema, type RegisterValues } from "@/schemas/auth";
+import { emptyProfile, formToProfile } from "@/features/profile/profile";
+import { registerSchema, type RegisterValues } from "@/schemas/auth";
 import { authService } from "@/services/auth-service";
+import { useRegistrationOpen } from "@/hooks/use-settings";
+import { useHydrated } from "@/hooks/use-store";
 
 function strength(pw: string) {
   let s = 0;
@@ -27,6 +30,24 @@ function strength(pw: string) {
 }
 
 export function RegisterForm() {
+  const open = useRegistrationOpen();
+  const hydrated = useHydrated();
+  if (hydrated && !open) return <RegistrationClosed />;
+  return <OpenRegisterForm />;
+}
+
+/** Shown instead of the form while an administrator has paused new sign-ups. */
+function RegistrationClosed() {
+  return (
+    <div role="status" className="rounded-lg border border-sand-300 bg-sand-100 p-5 text-sm leading-relaxed text-sand-700">
+      <p className="flex items-center gap-2 font-semibold text-olive-950"><Lock className="size-4" aria-hidden /> Registration is temporarily closed</p>
+      <p className="mt-2">We&apos;re finishing setting up Mission: SITREP and aren&apos;t accepting new accounts right now. Please check back soon.</p>
+      <p className="mt-2">Already a member? <Link href="/login" className="font-semibold text-olive-700 underline-offset-2 hover:underline">Sign in</Link> as usual.</p>
+    </div>
+  );
+}
+
+function OpenRegisterForm() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -36,7 +57,7 @@ export function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", userType: undefined, branch: "", password: "", confirm: "", terms: false },
+    defaultValues: { name: "", email: "", userType: undefined, ...emptyProfile, password: "", confirm: "", terms: false },
   });
   const pw = useWatch({ control, name: "password" }) ?? "";
   const score = strength(pw);
@@ -45,12 +66,7 @@ export function RegisterForm() {
   async function onSubmit(v: RegisterValues) {
     setFormError(null);
     try {
-      const user = await authService.register({
-        name: v.name,
-        email: v.email,
-        userType: v.userType,
-        branch: v.userType === "veteran" ? (v.branch as (typeof BRANCHES)[number]) : undefined,
-      });
+      const user = await authService.register({ ...formToProfile(v), email: v.email });
       toast.success(`Welcome to the community, ${user.name.split(" ")[0]}!`, { description: "Your demo account is ready." });
       router.push("/directory");
     } catch (e) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink, AdminMemberLink } from "@/components/admin/entity-links";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EditRequestDetail } from "./edit-request-detail";
@@ -31,13 +32,13 @@ export function EditRequestReviewQueue() {
     {
       id: "business", header: "Business", sort: (r) => r.businessName,
       cell: (r) => (
-        <button type="button" onClick={() => setOpenId(r.id)} className="block max-w-[16rem] text-left">
-          <span className="block truncate font-semibold text-olive-950 hover:text-olive-700">{r.businessName}</span>
+        <span className="block max-w-[16rem]">
+          <span className="block truncate"><AdminBusinessLink businessId={r.businessId} name={r.businessName} /></span>
           <span className="block truncate text-xs text-muted-foreground">{summarizeChanges(r.changes)}</span>
-        </button>
+        </span>
       ),
     },
-    { id: "owner", header: "Requested by", hideBelow: "md", sort: (r) => r.requesterName, cell: (r) => r.requesterName },
+    { id: "owner", header: "Requested by", hideBelow: "md", sort: (r) => r.requesterName, cell: (r) => <AdminMemberLink userId={r.requesterId} name={r.requesterName} className="font-medium" /> },
     { id: "date", header: "Submitted", hideBelow: "sm", sort: (r) => r.createdAt, cell: (r) => <span className="whitespace-nowrap text-muted-foreground">{formatDate(r.createdAt)}</span> },
     { id: "status", header: "Status", sort: (r) => r.status, cell: (r) => <EditStatusPill status={r.status} /> },
     { id: "act", header: "Review", srOnlyHeader: true, cell: (r) => <button type="button" onClick={() => setOpenId(r.id)} className="text-sm font-semibold text-olive-700 hover:underline">{r.status === "pending" ? "Review" : "View"}</button> },

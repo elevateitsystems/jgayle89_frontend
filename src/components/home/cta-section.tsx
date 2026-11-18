@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { IfRegistrationOpen } from "@/components/auth/registration-gate";
 import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,9 +22,11 @@ export function CtaSection() {
             businesses.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <IfRegistrationOpen>
             <Link href="/register" className={cn(buttonVariants({ variant: "light", size: "lg" }))}>
               Create a free account <ArrowRight />
             </Link>
+            </IfRegistrationOpen>
             <Link
               href="/directory"
               className={cn(

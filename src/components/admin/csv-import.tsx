@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PageHeader } from "./page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useSession } from "@/hooks/use-session";
 import { useBusinesses } from "@/hooks/use-businesses";
 import { useCategories } from "@/hooks/use-categories";
 import { analyzeCSV, CSV_COLUMNS, REQUIRED_COLUMNS, SAMPLE_CSV, SAMPLE_CSV_WITH_ERRORS, toCSV, type CsvAnalysis } from "@/lib/csv";
@@ -35,6 +36,7 @@ interface Loaded {
 }
 
 export function CsvImport() {
+  const viewer = useSession();
   const { businesses } = useBusinesses();
   const { categories } = useCategories();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -97,7 +99,7 @@ export function CsvImport() {
     if (valid.length === 0) return;
     setImporting(true);
     try {
-      await businessService.createMany(valid);
+      await businessService.createMany(valid, viewer ?? undefined);
       setResult({ imported: valid.length, failed: analysis.failedCount });
       toast.success(`Imported ${valid.length} ${valid.length === 1 ? "business" : "businesses"}`, {
         description: analysis.failedCount ? `${analysis.failedCount} rows were skipped.` : "They were added as Pending for review.",

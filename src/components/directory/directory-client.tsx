@@ -46,15 +46,16 @@ export function DirectoryClient() {
   // Paid placements are pinned to the top of results the visitor's filters already match — and always labelled.
   const { list: results, sponsoredIds } = useMemo(() => pinSponsored(matches, live, { category: filters.category }), [matches, live, filters.category]);
 
-  // Category counts reflect the other active filters (but not category itself).
-  const counts = useMemo(() => {
-    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "" }, categoryName, idsFor);
-    return base.reduce<Record<string, number>>((acc, b) => {
-      acc[b.category] = (acc[b.category] ?? 0) + 1;
-      return acc;
-    }, {});
+  // Category & subcategory counts reflect the other active filters (but not the category filters themselves).
+  // A business in several categories counts once in each; the total counts businesses.
+  const { counts, totalForCounts } = useMemo(() => {
+    const base = filterBusinesses(businesses, { ...filters, q: debouncedQ, location: debouncedLoc, category: "", subcategory: "" }, categoryName, idsFor);
+    const acc: Record<string, number> = {};
+    for (const b of base) {
+      for (const id of new Set([b.category, ...(b.secondaryCategories ?? []), ...(b.subcategories ?? [])])) acc[id] = (acc[id] ?? 0) + 1;
+    }
+    return { counts: acc, totalForCounts: base.length };
   }, [businesses, filters, debouncedQ, debouncedLoc, categoryName, idsFor]);
-  const totalForCounts = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -85,7 +86,8 @@ export function DirectoryClient() {
   }
 
   const activeChips = [
-    filters.category && { key: "category", label: categoryById(filters.category)?.name ?? filters.category, clear: () => update({ category: "" }) },
+    filters.category && { key: "category", label: categoryById(filters.category)?.name ?? filters.category, clear: () => update({ category: "", subcategory: "" }) },
+    filters.subcategory && { key: "subcategory", label: categoryById(filters.subcategory)?.name ?? filters.subcategory, clear: () => update({ subcategory: "" }) },
     filters.branch && { key: "branch", label: filters.branch, clear: () => update({ branch: "" }) },
     filters.minRating > 0 && { key: "rating", label: `${filters.minRating}+ stars`, clear: () => update({ minRating: 0 }) },
     filters.hiring && { key: "hiring", label: "Currently hiring", clear: () => update({ hiring: false }) },

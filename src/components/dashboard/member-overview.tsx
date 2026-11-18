@@ -2,12 +2,17 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowRight, Bookmark, CalendarDays, CalendarClock, ShieldCheck } from "lucide-react";
+import { ArrowRight, Bookmark, CalendarDays, CalendarClock, ExternalLink, Landmark, MapPin, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { Panel, PanelLink, StatCard } from "@/components/dashboard/panel";
 import { FeatureAccessIndicator } from "@/components/membership/feature-access";
 import { SubscriptionStatusBadge } from "@/components/membership/subscription-summary";
 import { DateBadge } from "@/components/events/event-card";
+import { MemberIdentityBadges } from "@/components/account/member-identity";
+import { ScopeBadge } from "@/components/benefits/benefit-badges";
+import { stateName } from "@/data/us-states";
+import { usePublicBenefits } from "@/features/benefits/hooks";
+import { buildBenefitIndex, filterBenefits } from "@/lib/benefit-filters";
 import { buttonVariants } from "@/components/ui/button";
 import { MEMBER_NAV } from "@/features/dashboard/nav";
 import { limitOf, formatPrice, priceFor } from "@/features/membership/access";
@@ -44,6 +49,13 @@ export function MemberOverview({ user }: { user: AppUser }) {
   const savedLimit = limitOf(plan, "saved_businesses");
   const apptLimit = limitOf(plan, "appointments");
   const apptUsed = appointmentsInMonth(appts, user.id, daysFromToday(0).slice(0, 7));
+  const catalogue = usePublicBenefits();
+  const homeState = user.location?.state ?? "";
+  // "Benefits Available in Your State" and federal — the member's state first (client update §2A).
+  const stateBenefits = useMemo(
+    () => (audience === "veteran" ? filterBenefits(buildBenefitIndex(catalogue, stateName), { q: "", state: homeState, category: "" }).slice(0, 5) : []),
+    [audience, catalogue, homeState],
+  );
   const quickLinks = MEMBER_NAV[audience].filter((i) => i.href !== "/dashboard" && i.href !== "/dashboard/settings");
 
   return (
@@ -53,6 +65,7 @@ export function MemberOverview({ user }: { user: AppUser }) {
         description={audience === "veteran" ? "Your benefits, businesses and advisor appointments in one place." : "Support veteran-owned businesses and find resources for your community."}
         actions={<Link href="/directory" className={buttonVariants()}>Browse the directory</Link>}
       />
+      <MemberIdentityBadges user={user} className="-mt-2 mb-6" />
 
       <section aria-label="At a glance" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Membership" value={plan?.name ?? "Free"} hint={sub?.renewsOn && sub.status !== "canceled" ? `Renews ${formatDate(sub.renewsOn)}` : "No renewal — free plan"} icon={ShieldCheck} href="/dashboard/membership" />
@@ -94,6 +107,31 @@ export function MemberOverview({ user }: { user: AppUser }) {
           )}
         </Panel>
       </div>
+
+      {audience === "veteran" && (
+        <Panel
+          title={homeState ? `Benefits Available in Your State · ${stateName(homeState)}` : "Benefits available to you"}
+          subtitle={homeState ? `${stateName(homeState)} programs first, then federal programs` : "Add your state in Account Settings to see your state's programs first"}
+          action={<PanelLink href="/dashboard/benefits">All benefits</PanelLink>}
+          className="mt-6"
+        >
+          <ul className="divide-y divide-sand-200">
+            {stateBenefits.map((b) => (
+              <li key={b.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-olive-100 text-olive-700">{b.state ? <MapPin className="size-4" aria-hidden /> : <Landmark className="size-4" aria-hidden />}</span>
+                <div className="min-w-0 flex-1">
+                  <Link href={`/benefits/${b.slug}`} className="block font-semibold text-olive-950 hover:text-olive-700">{b.title}</Link>
+                  <p className="line-clamp-1 text-sm text-muted-foreground">{b.summary}</p>
+                </div>
+                <ScopeBadge benefit={b} />
+                <a href={b.applyUrl ?? b.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-olive-700 hover:underline">
+                  Official site <ExternalLink className="size-3" aria-hidden /><span className="sr-only"> for {b.title} (opens in a new tab)</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
 
       <Panel title="Jump to" className="mt-6">
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

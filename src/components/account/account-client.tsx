@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { useSession } from "@/hooks/use-session";
 import { STAFF_PERMISSIONS, ROLE_LABEL, USER_TYPE_LABEL, isBackOffice } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-import { BRANCHES, profileSchema, type ProfileValues } from "@/schemas/auth";
+import { formToProfile, profileToForm } from "@/features/profile/profile";
+import { profileSchema, type ProfileValues } from "@/schemas/auth";
+import { MemberIdentityBadges } from "./member-identity";
 import { userService } from "@/services/user-service";
 import type { AppUser } from "@/types";
 
@@ -68,7 +70,7 @@ function OwnerNameForm({ user }: { user: AppUser }) {
 }
 
 function MemberProfileForm({ user }: { user: AppUser }) {
-  const initial = { name: user.name, userType: user.userType === "veteran" ? ("veteran" as const) : ("civilian" as const), branch: user.branch ?? "" };
+  const initial = profileToForm(user);
   const {
     register,
     control,
@@ -84,11 +86,7 @@ function MemberProfileForm({ user }: { user: AppUser }) {
 
   async function onSubmit(v: ProfileValues) {
     try {
-      await userService.updateProfile(user.id, {
-        name: v.name,
-        userType: v.userType,
-        branch: v.userType === "veteran" ? (v.branch as (typeof BRANCHES)[number]) : undefined,
-      });
+      await userService.updateProfile(user.id, formToProfile(v));
       toast.success("Profile updated");
     } catch (e) {
       toast.error("Couldn't save your profile", { description: e instanceof Error ? e.message : undefined });
@@ -134,6 +132,7 @@ export function AccountSummary({ user }: { user: AppUser }) {
           <div>
             <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Account type</dt>
             <dd className="mt-0.5">{USER_TYPE_LABEL[user.userType]}{user.branch ? ` · ${user.branch}` : ""}</dd>
+            <dd className="mt-2"><MemberIdentityBadges user={user} /></dd>
           </div>
         )}
         <div>

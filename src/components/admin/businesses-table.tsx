@@ -33,6 +33,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCategories } from "@/hooks/use-categories";
+import { useSession } from "@/hooks/use-session";
 import { useBusinesses } from "@/hooks/use-businesses";
 import { formatDate } from "@/lib/date";
 import { businessService } from "@/services/business-service";
@@ -41,6 +42,7 @@ import type { Business, ListingStatus } from "@/types";
 const PAGE_SIZE = 8;
 
 export function BusinessesTable() {
+  const viewer = useSession();
   const router = useRouter();
   const { businesses, loading } = useBusinesses();
   const { categories, categoryName } = useCategories();
@@ -81,7 +83,7 @@ export function BusinessesTable() {
   }
 
   async function changeStatus(b: Business, next: ListingStatus) {
-    await businessService.update(b.id, { status: next });
+    await businessService.update(b.id, { status: next }, viewer ?? undefined);
     toast.success(`${b.name} is now ${next}`);
   }
 

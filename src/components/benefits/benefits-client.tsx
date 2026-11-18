@@ -7,12 +7,14 @@ import { benefitCategoryIcon } from "./benefit-badges";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { benefitCategories } from "@/data/benefit-categories";
+import { benefitAudiences, benefitCategories } from "@/data/benefit-categories";
+import { usePublicBenefits } from "@/features/benefits/hooks";
+import { buildBenefitIndex } from "@/lib/benefit-filters";
 import { US_STATES, stateName } from "@/data/us-states";
 import { useBenefitFilters } from "@/hooks/use-benefit-filters";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSimulatedLoading } from "@/hooks/use-store";
-import { searchBenefits, statesWithPrograms } from "@/services/benefit-service";
+import { searchBenefitIndex } from "@/services/benefit-service";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 9;
@@ -24,9 +26,13 @@ export function BenefitsClient() {
 
   // Typing is debounced for the search pass; selects/pills apply immediately.
   const debouncedQ = useDebouncedValue(filters.q, 150);
+  // Reads the live, staff-managed catalogue (Admin → Benefits Management): published and not expired.
+  const catalogue = usePublicBenefits();
+  const index = useMemo(() => buildBenefitIndex(catalogue, stateName), [catalogue]);
+  const statesWithPrograms = useMemo(() => new Set(catalogue.flatMap((b) => (b.state ? [b.state] : []))), [catalogue]);
   const result = useMemo(
-    () => searchBenefits({ ...filters, q: debouncedQ }, page, PAGE_SIZE),
-    [filters, debouncedQ, page],
+    () => searchBenefitIndex(index, { ...filters, q: debouncedQ }, page, PAGE_SIZE),
+    [index, filters, debouncedQ, page],
   );
 
   // Keep the URL/page state valid if filters shrink the result set.
@@ -34,7 +40,7 @@ export function BenefitsClient() {
     if (page !== result.page) setPage(result.page);
   }, [page, result.page, setPage]);
 
-  const hasFilters = !!(filters.q || filters.state || filters.category);
+  const hasFilters = !!(filters.q || filters.state || filters.category || filters.audience || filters.scope);
   const totalForCounts = Object.values(result.categoryCounts).reduce((a, b) => a + b, 0);
   const stateWithoutOwnPrograms = !!filters.state && !statesWithPrograms.has(filters.state);
 
@@ -47,13 +53,13 @@ export function BenefitsClient() {
     <>
       <section className="border-b border-sand-200 bg-sand-100">
         <div className="container-page py-10 sm:py-14">
-          <p className="eyebrow">Veteran benefits</p>
-          <h1 className="mt-2 text-4xl font-semibold text-olive-950 sm:text-5xl">Find veteran benefits</h1>
+          <p className="eyebrow">Benefits Directory</p>
+          <h1 className="mt-2 text-4xl font-semibold text-olive-950 sm:text-5xl">Find veteran & military benefits</h1>
           <p className="mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Search federal programs available nationwide and state programs by state, then follow the official link to confirm eligibility and apply.
+            Search federal and state programs for veterans, service members and military families by state, military background and category — no account needed. We help you find potentially relevant programs; the official source decides who qualifies.
           </p>
 
-          <div role="search" className="mt-7 grid gap-3 rounded-lg bg-white p-3 shadow-card ring-1 ring-black/5 sm:p-4 md:grid-cols-[1fr_260px]">
+          <div role="search" className="mt-7 grid gap-3 rounded-lg bg-white p-3 shadow-card ring-1 ring-black/5 sm:grid-cols-2 sm:p-4 lg:grid-cols-[1fr_200px_220px_170px]">
             <label className="relative flex items-center">
               <span className="sr-only">Search benefits by keyword</span>
               <Search className="pointer-events-none absolute left-3 size-4 text-olive-600" aria-hidden />
@@ -74,6 +80,21 @@ export function BenefitsClient() {
                     {s.name}
                   </option>
                 ))}
+              </NativeSelect>
+            </label>
+            <label className="block">
+              <span className="sr-only">Military background</span>
+              <NativeSelect value={filters.audience ?? ""} onChange={(e) => update({ audience: e.target.value })} className="h-11">
+                <option value="">Any military background</option>
+                {benefitAudiences.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </NativeSelect>
+            </label>
+            <label className="block">
+              <span className="sr-only">Federal or state</span>
+              <NativeSelect value={filters.scope ?? ""} onChange={(e) => update({ scope: e.target.value })} className="h-11">
+                <option value="">Federal & state</option>
+                <option value="federal">Federal only</option>
+                <option value="state">State only</option>
               </NativeSelect>
             </label>
           </div>

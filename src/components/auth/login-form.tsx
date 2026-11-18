@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ForgotPasswordDialog } from "./forgot-password-dialog";
+import { IfRegistrationOpen } from "./registration-gate";
 import { PasswordInput } from "./password-input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -148,11 +149,11 @@ export function LoginForm() {
 
 export function LoginFooter() {
   return (
-    <>
+    <IfRegistrationOpen fallback={<>New account registration is temporarily paused. Existing members can sign in as usual.</>}>
       New to Mission: SITREP?{" "}
       <Link href="/register" className="font-semibold text-olive-700 underline-offset-2 hover:underline">
         Create an account
       </Link>
-    </>
+    </IfRegistrationOpen>
   );
 }

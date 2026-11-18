@@ -7,6 +7,7 @@ import {
   countByCategory,
   defaultBenefitFilters,
   filterBenefits,
+  isBenefitCurrent,
   paginate,
 } from "./benefit-filters.ts";
 
@@ -90,5 +91,23 @@ describe("paginate", () => {
     assert.equal(paginate(items, 99, 10).page, 3);
     assert.equal(paginate(items, -4, 10).page, 1);
     assert.deepEqual(paginate([], 1, 10), { items: [], page: 1, pageCount: 1, total: 0 });
+  });
+});
+
+describe("military background & scope filters (client update)", () => {
+  it("filters by military background", () => {
+    const fam = run({ audience: "families" });
+    assert.ok(fam.length > 0);
+    assert.ok(fam.every((b) => (b.audiences ?? ["veterans"]).includes("families")));
+    assert.ok(fam.some((b) => b.slug === "military-onesource"));
+  });
+  it("can show only federal or only state programs", () => {
+    assert.ok(run({ scope: "federal" }).every((b) => b.state === null));
+    assert.ok(run({ scope: "state", state: "TX" }).every((b) => b.state === "TX"));
+  });
+  it("hides expired programs via isBenefitCurrent", () => {
+    const b = { ...benefits[0], expiresOn: "2026-01-01" };
+    assert.equal(isBenefitCurrent(b, "2026-11-18"), false);
+    assert.equal(isBenefitCurrent(benefits[0], "2026-11-18"), true);
   });
 });

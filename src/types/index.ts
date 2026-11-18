@@ -1,10 +1,17 @@
 import type { Promotion, SocialLink } from "./business-ops";
+import type { FirstResponderProfile, MemberLocation, MilitaryProfile } from "./profile";
+import type { OfferApprovalSettings } from "./offers";
 
 export * from "./membership";
 export * from "./business-ops";
 export * from "./badges";
 export * from "./advertising";
 export * from "./member";
+export * from "./profile";
+export * from "./offers";
+export * from "./services";
+export * from "./places";
+export * from "./audit";
 
 export type ListingStatus = "active" | "pending" | "draft";
 export type EventStatus = "published" | "draft";
@@ -24,6 +31,14 @@ export interface Category {
   description: string;
   icon: string; // key into the icon map in lib/category-icons
   image: string;
+  /** Set for subcategories: the primary category they belong to. */
+  parentId?: string | null;
+  /** Inactive categories disappear from the site; their businesses are kept. */
+  active?: boolean;
+  /** Whether it is offered as a directory search filter. */
+  showInFilters?: boolean;
+  /** Display order (lower first). */
+  sortOrder?: number;
 }
 
 export interface Business {
@@ -64,6 +79,26 @@ export interface Business {
   socialLinks?: SocialLink[];
   /** Discounts shown on the public profile. Changes go through the edit-request workflow. */
   promotions?: Promotion[];
+  /** Extra primary categories the listing also appears under (the main one is `category`). */
+  secondaryCategories?: string[];
+  /** Subcategory ids (Category records with a parentId). */
+  subcategories?: string[];
+  /** "veteran_owned" (default) or a "veteran_friendly" business that supports the community. */
+  listingKind?: "veteran_owned" | "veteran_friendly";
+  /** Gallery images (count limited by the business plan). */
+  gallery?: string[];
+  /** Video links — YouTube/Vimeo URLs are embedded, anything else is linked. */
+  videos?: BusinessVideo[];
+  /** AppUser.id of the employee who added the listing (admin analytics). */
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface BusinessVideo {
+  id: string;
+  url: string;
+  title: string;
 }
 
 /** A review left on the Mission: SITREP platform itself (not Google). */
@@ -87,6 +122,10 @@ export interface GoogleRatingSummary {
 /** Platform-wide settings editable from the admin area. */
 export interface SiteSettings {
   showGoogleRatings: boolean;
+  /** When false, new public sign-ups are blocked; existing accounts still sign in. */
+  registrationOpen: boolean;
+  /** Who must approve business offers before they go live. */
+  offerApproval: OfferApprovalSettings;
 }
 
 export interface CommunityEvent {
@@ -157,7 +196,14 @@ export type Permission =
   | "benefits.manage"
   | "sponsorships.review"
   | "advertising.review"
-  | "users.manage";
+  | "users.manage"
+  | "categories.manage"
+  | "subcategories.manage"
+  | "badge_types.manage"
+  | "offers.manage"
+  | "services.manage"
+  | "services.discounts"
+  | "appointments.manage";
 
 export type UserStatus = "active" | "suspended";
 
@@ -171,6 +217,12 @@ export interface AppUser {
   permissions: Permission[]; // meaningful for staff only; admin has all, user has none
   status: UserStatus;
   createdAt: string; // ISO date
+  /** Veteran / military details (veteran members). */
+  military?: MilitaryProfile;
+  /** Set when the member chose "I am a First Responder". Shown as a badge; not a separate tier. */
+  firstResponder?: FirstResponderProfile;
+  /** Residence — drives "benefits in your state" and Near Me. */
+  location?: MemberLocation;
 }
 
 export interface ProfileLike {
@@ -178,6 +230,9 @@ export interface ProfileLike {
   /** Self-service sign-up and profile edits only cover members; Business Owner is assigned elsewhere. */
   userType: Exclude<UserType, "business_owner">;
   branch?: BranchOfService;
+  military?: MilitaryProfile;
+  firstResponder?: FirstResponderProfile;
+  location?: MemberLocation;
 }
 
 /** What is persisted for "who is signed in" — resolved to an AppUser by useSession. */
@@ -192,7 +247,12 @@ export type BenefitCategory =
   | "employment"
   | "disability"
   | "tax"
-  | "financial";
+  | "financial"
+  | "family"
+  | "other";
+
+/** Who a benefit is mainly aimed at — the "military background" filter. */
+export type BenefitAudience = "veterans" | "active_duty" | "reserve_guard" | "disabled_veterans" | "families" | "survivors";
 
 export type BenefitScope = "federal" | "state";
 
@@ -215,6 +275,10 @@ export interface Benefit {
   sourceUrl: string; // official program page
   applyUrl?: string; // official application page, when distinct
   tags: string[];
+  /** Military background the program is mainly aimed at (the directory's "military background" filter). */
+  audiences?: BenefitAudience[];
+  /** Optional end date for time-limited programs; expired entries are hidden publicly. */
+  expiresOn?: string;
   /**
    * "demo" = summary written for the prototype and NOT yet reviewed against the
    * official source; the UI labels it as such. Flip to "verified" (and set

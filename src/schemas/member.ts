@@ -9,4 +9,13 @@ export const appointmentSchema = z.object({
 });
 export type AppointmentFormValues = z.infer<typeof appointmentSchema>;
 
-export const APPOINTMENT_TOPICS = ["Benefits review", "Career coaching", "Financial planning", "Business owner Q&A", "Something else"] as const;
+export const APPOINTMENT_TOPICS = [
+  "Benefit assistance",
+  "Freebies & discounts assistance",
+  "Benefits review",
+  "Career coaching",
+  "Financial planning",
+  "Service follow-up",
+  "Business owner Q&A",
+  "Something else",
+] as const;
