@@ -86,7 +86,7 @@ export function EditRequestForm({ open, onOpenChange, ...rest }: Props) {
   );
 }
 
-function EditRequestBody({ onOpenChange, business, sections = ["details", "social", "promotions"], request, caps }: Omit<Props, "open">) {
+function EditRequestBody({ onOpenChange, business, sections = ["details", "social"], request, caps }: Omit<Props, "open">) {
   const user = useSession();
   const snapshot = useMemo(() => editableSnapshot(business), [business]);
   const [files, setFiles] = useState<StoredFile[]>(request?.attachments ?? []);

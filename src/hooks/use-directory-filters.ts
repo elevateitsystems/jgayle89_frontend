@@ -22,6 +22,7 @@ export function useDirectoryFilters() {
       q: params.get("q") ?? "",
       location: params.get("location") ?? "",
       category: params.get("category") ?? "",
+      subcategory: params.get("sub") ?? "",
       branch: params.get("branch") ?? "",
       minRating: Number(params.get("rating") ?? 0) || 0,
       badges: (params.get("badges") ?? "").split(",").filter(Boolean),
@@ -51,6 +52,7 @@ export function useDirectoryFilters() {
     if (filters.q) sp.set("q", filters.q);
     if (filters.location) sp.set("location", filters.location);
     if (filters.category) sp.set("category", filters.category);
+    if (filters.subcategory) sp.set("sub", filters.subcategory);
     if (filters.branch) sp.set("branch", filters.branch);
     if (filters.minRating) sp.set("rating", String(filters.minRating));
     if (filters.badges.length) sp.set("badges", filters.badges.join(","));

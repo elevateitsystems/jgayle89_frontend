@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { BadgeCheck, CircleDollarSign, Megaphone, ShieldCheck } from "lucide-react";
 import { BarChart, HBarList } from "@/components/admin/charts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OperationsReports } from "@/components/admin/operations-reports";
 import { PageHeader } from "@/components/admin/page-header";
 import { Panel, StatCard } from "@/components/dashboard/panel";
 import { useCampaigns } from "@/features/advertising/hooks";
@@ -67,7 +69,14 @@ export function ReportsAdmin() {
 
   return (
     <>
-      <PageHeader title="Reports & analytics" description="Revenue, subscriptions, advertising and review activity. Sample data for this preview." />
+      <PageHeader title="Reports & analytics" description="Employee activity, appointments, revenue and membership. Sample data for this preview." />
+      <Tabs defaultValue="operations">
+        <TabsList className="mb-5 h-auto max-w-full flex-wrap justify-start p-1">
+          <TabsTrigger value="operations" className="h-9 px-4">Listings &amp; appointments</TabsTrigger>
+          <TabsTrigger value="revenue" className="h-9 px-4">Revenue &amp; membership</TabsTrigger>
+        </TabsList>
+        <TabsContent value="operations"><OperationsReports /></TabsContent>
+        <TabsContent value="revenue">
       <section aria-label="Headline numbers" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Revenue (all time)" value={formatPrice(total)} hint={`${formatPrice(advertising)} from advertising`} icon={CircleDollarSign} />
         <StatCard label="Paid subscribers" value={paidSubs.length} hint="Active or past due" icon={BadgeCheck} />
@@ -90,6 +99,8 @@ export function ReportsAdmin() {
           </dl>
         </Panel>
       </div>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

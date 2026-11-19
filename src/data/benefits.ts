@@ -1,4 +1,4 @@
-import type { Benefit } from "@/types";
+import type { Benefit, BenefitAudience } from "@/types";
 
 /**
  * VETERAN BENEFITS — PROTOTYPE DATASET
@@ -650,12 +650,122 @@ const seeds: Seed[] = [
     sourceUrl: "https://vets.colorado.gov/",
     tags: ["property tax", "exemption", "primary residence", "disabled veteran"],
   },
+  // ───────── Added with the client's 2026-11 update (appended so existing ids stay stable) ─────────
+  {
+    slug: "military-onesource",
+    title: "Military OneSource",
+    category: "family",
+    agency: "U.S. Department of Defense",
+    summary: "Free, confidential support for service members and their families, including counseling, relocation help and spouse resources.",
+    description:
+      "Military OneSource is a Department of Defense program that gives service members and their families access to information, referrals and support. The official site lists the services available and who can use them.",
+    eligibility: [
+      "Service members and their families — eligibility details are listed on the official site",
+      "Some services continue for a period after separation; confirm on the official site",
+    ],
+    howToApply: [
+      "Visit Military OneSource to see the available services.",
+      "Contact Military OneSource online or by phone, as listed on the site.",
+    ],
+    sourceUrl: "https://www.militaryonesource.mil/",
+    tags: ["spouse", "family", "counseling", "relocation", "children", "support"],
+  },
+  {
+    slug: "spouse-education-and-career-opportunities",
+    title: "Spouse Education and Career Opportunities (SECO)",
+    category: "family",
+    agency: "U.S. Department of Defense",
+    summary: "Career coaching, education guidance and job-search support for military spouses.",
+    description:
+      "The Department of Defense SECO program offers career and education resources for military spouses. Its portal explains the services and how to reach a career coach.",
+    eligibility: ["Military spouses — the official portal lists who qualifies"],
+    howToApply: ["Visit the SECO portal and follow the instructions to connect with a career coach."],
+    sourceUrl: "https://spouseworks.militaryonesource.mil/portal/",
+    tags: ["spouse", "career", "jobs", "education", "family"],
+  },
+  {
+    slug: "champva",
+    title: "CHAMPVA Health Coverage for Families",
+    category: "family",
+    agency: "U.S. Department of Veterans Affairs",
+    summary: "A health care program that may cover some spouses, surviving spouses and children of Veterans with certain service-connected disabilities.",
+    description:
+      "CHAMPVA shares the cost of some health care services and supplies for eligible family members. Eligibility depends on the Veteran's disability status and the family member's situation, as described on VA.gov.",
+    eligibility: [
+      "Spouse, surviving spouse or child of a Veteran who meets VA's criteria",
+      "Not eligible for TRICARE — see the official page for the full rules",
+    ],
+    howToApply: ["Review CHAMPVA eligibility on VA.gov.", "Apply using the instructions on the official page."],
+    sourceUrl: "https://www.va.gov/family-and-caregiver-benefits/health-and-disability/champva/",
+    tags: ["health care", "spouse", "children", "survivors", "family", "insurance"],
+  },
+  {
+    slug: "va-burial-and-memorial-benefits",
+    title: "VA Burial and Memorial Benefits",
+    category: "other",
+    agency: "U.S. Department of Veterans Affairs",
+    summary: "Burial in a VA national cemetery, headstones and markers, and some burial allowances for eligible Veterans and family members.",
+    description:
+      "VA offers burial and memorial benefits that may include burial in a national cemetery, a headstone or marker, a Presidential Memorial Certificate and burial allowances. Eligibility rules are on VA.gov.",
+    eligibility: ["Veterans and some family members — see VA's burial eligibility page"],
+    howToApply: ["Review the burial benefits on VA.gov.", "Plan ahead or apply at the time of need as described on the official page."],
+    sourceUrl: "https://www.va.gov/burials-memorials/",
+    applyUrl: "https://www.va.gov/burials-memorials/eligibility/",
+    tags: ["burial", "memorial", "cemetery", "headstone", "survivors"],
+  },
+  {
+    slug: "veteran-id-card",
+    title: "Veteran ID Card",
+    category: "other",
+    agency: "U.S. Department of Veterans Affairs",
+    summary: "A digital or physical ID card that shows you served, which many businesses accept for military discounts.",
+    description:
+      "The Veteran ID Card (VIC) is a photo ID for Veterans who served. It isn't an official government ID for travel or voting, but it can be used to show proof of service. VA.gov explains who can request one.",
+    eligibility: ["Veterans who meet VA's service and discharge requirements for the card"],
+    howToApply: ["Request the card online through VA.gov."],
+    sourceUrl: "https://www.va.gov/records/get-veteran-id-cards/vic/",
+    tags: ["id card", "proof of service", "discounts", "veteran id"],
+  },
 ];
+
+/**
+ * "Military background" filter tags (client update §2A). Grouped by slug so the long records above stay readable.
+ * Federal/state programs with no entry here are treated as aimed at Veterans generally.
+ */
+const AUDIENCES: Record<string, BenefitAudience[]> = {
+  "post-9-11-gi-bill": ["veterans", "active_duty", "reserve_guard", "families"],
+  "survivors-dependents-education-assistance": ["families", "survivors"],
+  "va-health-care": ["veterans", "disabled_veterans"],
+  "va-mental-health-services": ["veterans", "active_duty", "reserve_guard"],
+  "veterans-crisis-line": ["veterans", "active_duty", "reserve_guard", "families"],
+  "va-disability-compensation": ["disabled_veterans"],
+  "special-monthly-compensation": ["disabled_veterans"],
+  "caregiver-support-program": ["disabled_veterans", "families"],
+  "va-home-loan-guaranty": ["veterans", "active_duty", "reserve_guard", "survivors"],
+  "specially-adapted-housing-grants": ["disabled_veterans"],
+  "veteran-readiness-and-employment": ["disabled_veterans", "active_duty"],
+  "federal-veterans-preference": ["veterans", "disabled_veterans"],
+  "dependency-and-indemnity-compensation": ["survivors", "families"],
+  "military-onesource": ["active_duty", "reserve_guard", "families"],
+  "spouse-education-and-career-opportunities": ["families"],
+  "champva": ["families", "survivors"],
+  "va-burial-and-memorial-benefits": ["veterans", "survivors", "families"],
+  "virginia-vmsdep": ["families", "survivors"],
+  "california-college-fee-waiver": ["families"],
+  "north-carolina-wartime-veterans-scholarship": ["families"],
+  "texas-disabled-veteran-property-tax-exemption": ["disabled_veterans"],
+  "california-disabled-veterans-property-tax-exemption": ["disabled_veterans", "survivors"],
+  "florida-disabled-veteran-homestead-exemption": ["disabled_veterans", "survivors"],
+  "virginia-100-percent-disabled-veteran-real-estate-tax-exemption": ["disabled_veterans"],
+  "north-carolina-disabled-veteran-homestead-exclusion": ["disabled_veterans", "survivors"],
+  "colorado-disabled-veteran-property-tax-exemption": ["disabled_veterans"],
+};
 
 export const benefits: Benefit[] = seeds.map((s, i) => ({
   ...s,
   id: `ben_${String(i + 1).padStart(3, "0")}`,
   scope: s.state ? "state" : "federal",
   state: s.state ?? null,
+  audiences: AUDIENCES[s.slug] ?? ["veterans"],
   dataStatus: "demo",
 }));

@@ -1,7 +1,10 @@
 import { createCollectionStore, delay } from "@/lib/demo-store";
 import { daysFromToday } from "@/lib/date";
+import { appointments as seedAppointments } from "@/lib/mock-data/appointments";
 import { newId } from "@/lib/slug";
-import type { Appointment, AppointmentMode, SavedBusiness } from "@/types";
+import { requirePermission, type Reviewer } from "@/services/actor";
+import { auditService } from "@/services/audit-service";
+import type { Appointment, AppointmentContext, AppointmentMode, AppointmentStatus, SavedBusiness } from "@/types";
 
 /**
  * Member (Veteran / Civilian) data layer — saved businesses and advisor appointments (demo implementation).
@@ -13,10 +16,7 @@ export const savedStore = createCollectionStore<SavedBusiness>("saved-businesses
   { id: "sv_003", userId: "usr_006", businessId: "biz_003", savedOn: "2026-10-15" },
 ]);
 
-export const appointmentStore = createCollectionStore<Appointment>("appointments", [
-  { id: "ap_seed_1", userId: "usr_005", topic: "Benefits review", mode: "video", date: daysFromToday(6), time: "10:30", notes: "Questions about disability rating and education benefits.", status: "confirmed", createdAt: "2026-11-09T12:00:00Z" },
-  { id: "ap_seed_2", userId: "usr_005", topic: "Career coaching", mode: "phone", date: daysFromToday(-12), time: "15:00", notes: "", status: "completed", createdAt: "2026-10-20T12:00:00Z" },
-]);
+export const appointmentStore = createCollectionStore<Appointment>("appointments", seedAppointments);
 
 export const savedService = {
   isSaved(userId: string, businessId: string) {
@@ -45,6 +45,8 @@ export interface AppointmentInput {
   date: string;
   time: string;
   notes: string;
+  /** Set when booked from a "Schedule an Appointment for Assistance" button. */
+  context?: AppointmentContext;
 }
 
 const monthKey = (iso: string) => iso.slice(0, 7);
@@ -61,7 +63,10 @@ export const appointmentService = {
     const all = appointmentStore.getSnapshot();
     const used = appointmentsInMonth(all, userId, monthKey(input.date));
     if (limit !== null && used >= limit) throw new Error(`Your plan includes ${limit} appointment${limit === 1 ? "" : "s"} per month and that month is full.`);
-    const appt: Appointment = { id: newId("ap"), userId, ...input, notes: input.notes.trim(), status: "requested", createdAt: new Date().toISOString() };
+    const appt: Appointment = {
+      id: newId("ap"), userId, ...input, notes: input.notes.trim(), status: "requested", createdAt: new Date().toISOString(),
+      ...(input.context ? { context: input.context } : {}),
+    };
     appointmentStore.set([appt, ...all]);
     return appt;
   },
@@ -75,3 +80,26 @@ export const appointmentService = {
     appointmentStore.set(all.map((x) => (x.id === id ? { ...x, status: "cancelled" as const } : x)));
   },
 };
+
+/** Staff-side appointment handling (Admin → Appointments). The API must enforce `appointments.manage`. */
+export const appointmentAdminService = {
+  async assign(id: string, staffId: string | undefined, actor: Reviewer): Promise<void> {
+    await delay(250);
+    requirePermission(actor, "appointments.manage", "assign appointments");
+    patchAppointment(id, { assignedTo: staffId });
+    auditService.record(actor, "appointments", staffId ? "assigned" : "unassigned", { id, name: id }, staffId);
+  },
+
+  async setStatus(id: string, status: AppointmentStatus, actor: Reviewer): Promise<void> {
+    await delay(250);
+    requirePermission(actor, "appointments.manage", "update appointments");
+    patchAppointment(id, { status });
+    auditService.record(actor, "appointments", `marked ${status}`, { id, name: id });
+  },
+};
+
+function patchAppointment(id: string, patch: Partial<Appointment>) {
+  const all = appointmentStore.getSnapshot();
+  if (!all.some((a) => a.id === id)) throw new Error("Appointment not found.");
+  appointmentStore.set(all.map((a) => (a.id === id ? { ...a, ...patch, updatedAt: new Date().toISOString() } : a)));
+}

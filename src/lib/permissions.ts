@@ -31,6 +31,14 @@ export const STAFF_PERMISSIONS: PermissionInfo[] = [
   { id: "sponsorships.review", label: "Review sponsorships", description: "Approve, reject and schedule sponsorship campaigns." },
   { id: "advertising.review", label: "Review advertising", description: "Approve, reject and schedule advertising campaigns." },
   { id: "users.manage", label: "Manage members", description: "View members and suspend or reactivate accounts." },
+  // Structure permissions: admin-only by default, grantable one at a time.
+  { id: "categories.manage", label: "Create & edit categories", description: "Create, rename, reorder, activate or deactivate primary business categories." },
+  { id: "subcategories.manage", label: "Create & edit subcategories", description: "Create, rename, move, activate or deactivate subcategories." },
+  { id: "badge_types.manage", label: "Create & edit badge types", description: "Create badge types and edit their names, descriptions, icons and availability." },
+  { id: "offers.manage", label: "Manage offers & freebies", description: "Create, edit, approve, deactivate and remove business offers and Freebies & Discounts listings." },
+  { id: "services.manage", label: "Manage services & orders", description: "Edit marketplace services and update the status of purchased services." },
+  { id: "services.discounts", label: "Apply service discounts", description: "Create promotions directly. Without it, staff can only request a discount for admin approval." },
+  { id: "appointments.manage", label: "Manage appointments", description: "Assign, confirm, complete or cancel member appointment requests." },
 ];
 
 export const ALL_PERMISSION_IDS = STAFF_PERMISSIONS.map((p) => p.id);
@@ -73,9 +81,20 @@ export type AdminSectionId =
   | "advertising-reviews"
   | "payments"
   | "reports"
-  | "settings";
+  | "settings"
+  | "freebies"
+  | "business-offers"
+  | "services"
+  | "service-orders"
+  | "appointments"
+  | "business-analytics"
+  | "activity";
 
-type Requirement = { kind: "backoffice" } | { kind: "permission"; permission: Permission } | { kind: "admin" };
+type Requirement =
+  | { kind: "backoffice" }
+  | { kind: "permission"; permission: Permission }
+  | { kind: "any"; permissions: Permission[] }
+  | { kind: "admin" };
 
 export interface AdminSection {
   id: AdminSectionId;
@@ -92,29 +111,37 @@ export const ADMIN_GROUPS = ["Overview", "Listings & people", "Reviews", "Member
 export type AdminGroup = (typeof ADMIN_GROUPS)[number];
 
 const perm = (permission: Permission): Requirement => ({ kind: "permission", permission });
+const anyOf = (...permissions: Permission[]): Requirement => ({ kind: "any", permissions });
 
 /** Single source of truth for admin/staff navigation AND route protection. */
 export const ADMIN_SECTIONS: (AdminSection & { group: AdminGroup })[] = [
   { id: "dashboard", group: "Overview", label: "Overview", href: "/admin", exact: true, requires: { kind: "backoffice" } },
   { id: "businesses", group: "Listings & people", label: "Business Management", staffLabel: "Business Listings", href: "/admin/businesses", requires: perm("businesses.manage") },
-  { id: "categories", group: "Listings & people", label: "Business Categories", href: "/admin/categories", requires: { kind: "admin" } },
-  { id: "badges", group: "Listings & people", label: "Business Badges", staffLabel: "Badge Management", href: "/admin/badges", requires: perm("badges.manage") },
+  { id: "categories", group: "Listings & people", label: "Business Categories", href: "/admin/categories", requires: anyOf("categories.manage", "subcategories.manage") },
+  { id: "badges", group: "Listings & people", label: "Business Badges", staffLabel: "Badge Management", href: "/admin/badges", requires: anyOf("badges.manage", "badge_types.manage") },
   { id: "users", group: "Listings & people", label: "User Management", href: "/admin/users", requires: perm("users.manage") },
   { id: "staff", group: "Listings & people", label: "Staff Management", href: "/admin/staff", requires: { kind: "admin" } },
   { id: "edit-requests", group: "Reviews", label: "Business Edit Requests", href: "/admin/edit-requests", requires: perm("edits.review") },
   { id: "verification", group: "Reviews", label: "Business Verification", href: "/admin/verification", requires: perm("verification.review") },
   { id: "sponsorship-approvals", group: "Reviews", label: "Sponsorship Approvals", href: "/admin/sponsorship-approvals", requires: perm("sponsorships.review") },
   { id: "advertising-reviews", group: "Reviews", label: "Advertising Reviews", href: "/admin/advertising-reviews", requires: perm("advertising.review") },
+  { id: "business-offers", group: "Reviews", label: "Business Offers", href: "/admin/business-offers", requires: perm("offers.manage") },
+  { id: "appointments", group: "Reviews", label: "Appointments", href: "/admin/appointments", requires: perm("appointments.manage") },
   { id: "plans", group: "Membership & revenue", label: "Membership Plans", href: "/admin/plans", requires: { kind: "admin" } },
   { id: "subscriptions", group: "Membership & revenue", label: "Subscriptions", href: "/admin/subscriptions", requires: { kind: "admin" } },
   { id: "ad-products", group: "Membership & revenue", label: "Sponsorship Products", href: "/admin/ad-products", requires: { kind: "admin" } },
   { id: "campaigns", group: "Membership & revenue", label: "Advertising Campaigns", href: "/admin/campaigns", requires: { kind: "admin" } },
   { id: "payments", group: "Membership & revenue", label: "Payments & Transactions", href: "/admin/payments", requires: { kind: "admin" } },
+  { id: "services", group: "Membership & revenue", label: "Services Marketplace", href: "/admin/services", requires: anyOf("services.manage", "services.discounts") },
+  { id: "service-orders", group: "Membership & revenue", label: "Service Orders", href: "/admin/service-orders", requires: perm("services.manage") },
   { id: "events", group: "Content", label: "Events Management", staffLabel: "Events", href: "/admin/events", requires: perm("events.manage") },
   { id: "benefits", group: "Content", label: "Benefits Management", staffLabel: "Benefits", href: "/admin/benefits", requires: perm("benefits.manage") },
+  { id: "freebies", group: "Content", label: "Freebies & Discounts", href: "/admin/freebies", requires: perm("offers.manage") },
   { id: "photos", group: "Content", label: "Photos", href: "/admin/photos", requires: perm("photos.upload") },
   { id: "import", group: "Content", label: "CSV Import", href: "/admin/import", requires: perm("csv.import") },
   { id: "reports", group: "System", label: "Reports & Analytics", href: "/admin/reports", requires: { kind: "admin" } },
+  { id: "business-analytics", group: "System", label: "Business Analytics", href: "/admin/business-analytics", requires: { kind: "admin" } },
+  { id: "activity", group: "System", label: "Activity Log", href: "/admin/activity", requires: { kind: "admin" } },
   { id: "settings", group: "System", label: "Settings", href: "/admin/settings", requires: { kind: "admin" } },
 ];
 
@@ -127,6 +154,7 @@ export function canAccessSection(u: Actor, section: Pick<AdminSection, "requires
   const r = section.requires;
   if (r.kind === "backoffice") return isBackOffice(u);
   if (r.kind === "admin") return isAdmin(u);
+  if (r.kind === "any") return r.permissions.some((p) => hasPermission(u, p));
   return hasPermission(u, r.permission);
 }
 

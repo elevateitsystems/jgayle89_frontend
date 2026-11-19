@@ -3,13 +3,14 @@ import { createCollectionStore, delay } from "@/lib/demo-store";
 import { daysFromToday } from "@/lib/date";
 import { newId } from "@/lib/slug";
 import { businessStore } from "@/services/business-service";
-import { requireAdmin, requirePermission, type Requester, type Reviewer } from "@/services/actor";
+import { requirePermission, type Requester, type Reviewer } from "@/services/actor";
+import { auditService } from "@/services/audit-service";
 import type { BadgeAssignment, BadgeDocument, BadgeRequest, BusinessBadge } from "@/types";
 
 /**
  * Badge & verification data layer (demo implementation).
  * Only staff (verification.review / badges.manage) or admins can create an assignment. Membership,
- * billing and the owner dashboard have no path to one — verification is never purchased.
+ * billing and the owner dashboard have no path to one. (Paid plans *derive* the auto-award badge — see features/badges/rules.)
  */
 export const badgeStore = createCollectionStore<BusinessBadge>("badges", seedBadges);
 export const assignmentStore = createCollectionStore<BadgeAssignment>("badge-assignments", seedAssignments);
@@ -43,20 +44,23 @@ export const badgeService = {
   // ---- Admin: badge types
   async create(input: BadgeInput, admin: Reviewer): Promise<BusinessBadge> {
     await delay(400);
-    requireAdmin(admin, "create badges");
+    requirePermission(admin, "badge_types.manage", "create badge types");
     if (badges().some((b) => b.name.toLowerCase() === input.name.trim().toLowerCase())) throw new Error("A badge with that name already exists.");
     const badge: BusinessBadge = { ...input, name: input.name.trim(), id: newId("badge"), sortOrder: Math.max(0, ...badges().map((b) => b.sortOrder)) + 1 };
     badgeStore.set([...badges(), badge]);
+    auditService.record(admin, "badges", "created badge type", { id: badge.id, name: badge.name });
     return badge;
   },
 
   async update(id: string, input: Partial<BadgeInput>, admin: Reviewer): Promise<BusinessBadge> {
     await delay(400);
-    requireAdmin(admin, "edit badges");
+    requirePermission(admin, "badge_types.manage", "edit badge types");
     const current = activeBadge(id);
     if (input.name && badges().some((b) => b.id !== id && b.name.toLowerCase() === input.name!.trim().toLowerCase())) throw new Error("A badge with that name already exists.");
     const next = { ...current, ...input, ...(input.name ? { name: input.name.trim() } : {}) };
     badgeStore.set(badges().map((b) => (b.id === id ? next : b)));
+    const action = input.active !== undefined && input.active !== current.active ? (input.active ? "activated badge type" : "deactivated badge type") : current.name !== next.name ? "renamed badge type" : "edited badge type";
+    auditService.record(admin, "badges", action, { id, name: next.name }, current.name !== next.name ? `“${current.name}” → “${next.name}”` : undefined);
     return next;
   },
 
@@ -109,7 +113,19 @@ export const badgeService = {
     const badge = activeBadge(badgeId);
     if (!badge.active) throw new Error("Inactive badges can't be assigned.");
     if (verifiedOn > today()) throw new Error("The verification date can't be in the future.");
-    return grant(businessId, badgeId, staff.name, verifiedOn);
+    const a = grant(businessId, badgeId, staff.name, verifiedOn);
+    auditService.record(staff, "badges", "assigned badge", { id: a.id, name: `${badge.name} · ${businessStore.getSnapshot().find((b) => b.id === businessId)?.name ?? businessId}` });
+    return a;
+  },
+
+  /** Turn an assignment off (hidden publicly) or back on, without revoking it. */
+  async setAssignmentVisible(assignmentId: string, visible: boolean, staff: Reviewer): Promise<void> {
+    await delay(250);
+    requirePermission(staff, "badges.manage", "turn badges on or off");
+    const current = assignments().find((a) => a.id === assignmentId);
+    if (!current || current.status !== "active") throw new Error("That badge isn't currently assigned.");
+    assignmentStore.set(assignments().map((a) => (a.id === assignmentId ? { ...a, hidden: !visible } : a)));
+    auditService.record(staff, "badges", visible ? "turned badge on" : "turned badge off", { id: assignmentId, name: `${activeBadge(current.badgeId).name} · ${businessStore.getSnapshot().find((b) => b.id === current.businessId)?.name ?? current.businessId}` });
   },
 
   async revoke(assignmentId: string, reason: string, staff: Reviewer): Promise<BadgeAssignment> {
@@ -120,6 +136,7 @@ export const badgeService = {
     if (reason.trim().length < 5) throw new Error("Add a short reason for revoking this badge.");
     const next: BadgeAssignment = { ...current, status: "revoked", revokedOn: today(), revokedBy: staff.name, revokedReason: reason.trim() };
     assignmentStore.set(assignments().map((a) => (a.id === assignmentId ? next : a)));
+    auditService.record(staff, "badges", "removed badge", { id: assignmentId, name: activeBadge(current.badgeId).name }, reason.trim());
     return next;
   },
 

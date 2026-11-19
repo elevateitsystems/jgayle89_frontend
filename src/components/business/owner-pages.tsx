@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FileEdit, Percent } from "lucide-react";
+import { Check, FileEdit, MessageSquare, Pencil, Percent, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { AnalyticsView } from "./analytics-view";
 import { BusinessPicker, NoBusinesses, useSelectedBusiness } from "./business-picker";
 import { EditRequestForm, type EditSection } from "./edit-request-form";
@@ -18,14 +19,21 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOwnedBusinesses, useOwnerEditRequests } from "@/features/business/hooks";
-import { cheapestPlanWith } from "@/features/membership/access";
+import { cheapestPlanWith, limitOf } from "@/features/membership/access";
+import { useBusinessOffers } from "@/features/offers/hooks";
+import { OFFER_AUDIENCE_LABEL, awaitingFrom, countsAgainstAllowance, requiredApprovals } from "@/features/offers/rules";
+import { OfferFormSheet, approvalNoteFor } from "@/components/offers/offer-form";
+import { OfferStatusPill } from "@/components/offers/offer-ui";
+import { RejectOfferDialog } from "@/components/offers/reject-offer-dialog";
+import { useSiteSettings } from "@/hooks/use-settings";
+import { offerService } from "@/services/offer-service";
 import { useAllPlans, useBusinessPlans, useInvoices, useResolvedPlan } from "@/features/membership/hooks";
 import { useSession } from "@/hooks/use-session";
-import { formatDate } from "@/lib/date";
-import type { Business } from "@/types";
+import { formatDate, todayISO } from "@/lib/date";
+import type { Business, BusinessOffer } from "@/types";
 
 /** Shared scaffolding: loads the owner's businesses, shows the picker, and renders `children` for the selected one. */
-function ForSelectedBusiness({ pickerLabel, children }: { pickerLabel?: string; children: (b: Business) => React.ReactNode }) {
+export function ForSelectedBusiness({ pickerLabel, children }: { pickerLabel?: string; children: (b: Business) => React.ReactNode }) {
   const user = useSession();
   const { businesses, loading } = useOwnedBusinesses(user?.id);
   const { selected, setId } = useSelectedBusiness(businesses);
@@ -122,42 +130,119 @@ function SocialLinksPanel({ business }: { business: Business }) {
 export function PromotionsPage() {
   return (
     <>
-      <PageHeader title="Discounts & promotions" description="Veteran and first-responder offers shown on your public profile. New and changed offers are reviewed by staff." />
+      <PageHeader title="Discounts & promotions" description="Veteran and first-responder offers shown on your public profile. Offers are approved before they go public; temporary deals show a countdown." />
       <ForSelectedBusiness>{(b) => <PromotionsPanel key={b.id} business={b} />}</ForSelectedBusiness>
     </>
   );
 }
 
-const AUDIENCE_LABEL = { veterans: "Veterans & military", first_responders: "First responders", everyone: "Everyone" } as const;
-
+/**
+ * Owner offers (client update §4C). Owners submit and update their own offers; the approval rule in Admin → Settings
+ * decides whether staff, the owner, or both must approve before anything is public.
+ */
 function PromotionsPanel({ business }: { business: Business }) {
+  const user = useSession();
   const plan = useResolvedPlan("business", business.id);
   const plans = useAllPlans();
-  const promos = business.promotions ?? [];
-  const locked = plan?.features.promotions?.enabled === false;
+  const settings = useSiteSettings();
+  const offers = useBusinessOffers(business.id);
+  const [editing, setEditing] = useState<BusinessOffer | "new" | null>(null);
+  const [rejecting, setRejecting] = useState<BusinessOffer | null>(null);
+  const limit = limitOf(plan, "promotions");
+  const locked = limit === 0;
   const needs = cheapestPlanWith(plans, "business", "promotions");
+  const today = todayISO();
+  const used = offers.filter((o) => countsAgainstAllowance(o, today)).length;
+  const ownerRequires = requiredApprovals(settings.offerApproval.ownerSubmitted, "owner");
+  const sorted = [...offers].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  async function run(fn: () => Promise<unknown>, ok: string) {
+    try { await fn(); toast.success(ok); } catch (e) { toast.error("Couldn't update the offer", { description: e instanceof Error ? e.message : undefined }); }
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         {locked && <UpgradePrompt featureLabel="Discounts & promotions" requiredPlan={needs?.name} href="/dashboard/memberships" />}
-        <Panel title={`Promotions on ${business.name}`} action={!locked && <SectionEditor business={business} sections={["promotions"]} label="Request changes" />}>
-          <RequestBanner field="promotions" businessId={business.id} />
-          {promos.length === 0 ? (
-            <EmptyState icon={Percent} title="No promotions yet" description={locked ? "Upgrade to add a discount." : "Add a discount for veterans or first responders."} className="border-0 bg-transparent py-8" />
+        <Panel title={`Offers on ${business.name}`} action={!locked && user && <Button size="sm" onClick={() => setEditing("new")}><Plus /> New offer</Button>}>
+          {sorted.length === 0 ? (
+            <EmptyState icon={Percent} title="No offers yet" description={locked ? "Upgrade to add a discount." : "Add a discount for veterans or first responders."} className="border-0 bg-transparent py-8" />
           ) : (
             <ul className="space-y-3">
-              {promos.map((p) => (
-                <li key={p.id} className="rounded-md border bg-white p-4">
-                  <div className="flex flex-wrap items-center gap-2"><StatusPill tone="good">{p.discountText}</StatusPill><span className="text-xs text-muted-foreground">{AUDIENCE_LABEL[p.audience]}{p.validUntil ? ` · until ${formatDate(p.validUntil)}` : ""}</span></div>
-                  <p className="mt-2 font-semibold text-olive-950">{p.title}</p>
-                  <p className="text-sm text-muted-foreground">{p.description}</p>
-                </li>
-              ))}
+              {sorted.map((o) => {
+                const waiting = awaitingFrom(o);
+                return (
+                  <li key={o.id} className="rounded-md border bg-white p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill tone="good">{o.discountText}</StatusPill>
+                      <OfferStatusPill offer={o} />
+                      <span className="text-xs text-muted-foreground">{OFFER_AUDIENCE_LABEL[o.audience]}{o.expiresOn ? ` · until ${formatDate(o.expiresOn)}` : ""}</span>
+                    </div>
+                    <p className="mt-2 font-semibold text-olive-950">{o.title}</p>
+                    {o.description && <p className="text-sm text-muted-foreground">{o.description}</p>}
+                    {waiting.length > 0 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {waiting.includes("owner") ? `Created by ${o.createdByName} (staff) — waiting for your approval.` : "Waiting for Mission: SITREP staff to approve."}
+                      </p>
+                    )}
+                    {o.status === "rejected" && (
+                      <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                        <p><span className="font-semibold text-destructive">Rejected.</span> {o.rejectionReason}</p>
+                        {o.talkRequested ? (
+                          <p className="mt-2 text-xs text-muted-foreground">You asked to speak with staff — we&apos;ll be in touch. (Demo: no message is sent.)</p>
+                        ) : (
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => user && run(() => offerService.requestTalk(o.id, user), "Request sent to staff")}>
+                            <MessageSquare /> Request to speak with staff
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {waiting.includes("owner") && user && (
+                        <>
+                          <Button size="sm" onClick={() => run(() => offerService.approve(o.id, "owner", user), "Offer approved")}><Check /> Approve</Button>
+                          <Button size="sm" variant="outline" onClick={() => setRejecting(o)}><X /> Reject</Button>
+                        </>
+                      )}
+                      {o.status !== "inactive" && !locked && <Button size="sm" variant="ghost" onClick={() => setEditing(o)}><Pencil /> Update</Button>}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Panel>
       </div>
-      <Panel title="Plan allowance"><UsageMeter plan={plan} featureId="promotions" used={promos.length} label="Active promotions" /></Panel>
+      <div className="space-y-6">
+        <Panel title="Plan allowance"><UsageMeter plan={plan} featureId="promotions" used={used} label="Active offers" /></Panel>
+        <Panel title="How approval works">
+          <p className="text-sm text-muted-foreground">{approvalNoteFor(ownerRequires)} Updating a live offer sends the new version for approval again.</p>
+        </Panel>
+      </div>
+      <OfferFormSheet
+        open={!!editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        offer={editing && editing !== "new" ? editing : null}
+        approvalNote={approvalNoteFor(ownerRequires)}
+        onSubmit={async (input) => {
+          if (!user) return;
+          try {
+            if (editing === "new") await offerService.submitByOwner(business.id, input, user, limit);
+            else if (editing) await offerService.update(editing.id, input, user, "owner");
+            toast.success("Offer submitted", { description: approvalNoteFor(ownerRequires) });
+            setEditing(null);
+          } catch (e) {
+            toast.error("Couldn't submit the offer", { description: e instanceof Error ? e.message : undefined });
+          }
+        }}
+      />
+      <RejectOfferDialog
+        open={!!rejecting}
+        onOpenChange={(o) => !o && setRejecting(null)}
+        title={rejecting?.title ?? ""}
+        side="owner"
+        onReject={async (reason) => { if (rejecting && user) await run(() => offerService.reject(rejecting.id, "owner", user, reason), "Offer rejected"); }}
+      />
     </div>
   );
 }
@@ -170,7 +255,7 @@ export function BusinessMembershipsPage() {
   const summary = useMemo(() => businesses.map((b) => ({ b, plan: plans.get(b.id) })), [businesses, plans]);
   return (
     <>
-      <PageHeader title="Business memberships" description="Each business has its own plan. Membership never grants verification badges, and advertising is bought separately." />
+      <PageHeader title="Business memberships" description="Each business has its own plan. Paid plans include the “Verified Business” badge; other verification badges are earned through staff review. Advertising is bought separately." />
       {loading ? <Skeleton className="h-64" /> : !user || businesses.length === 0 ? <NoBusinesses /> : (
         <div className="space-y-8">
           {businesses.length > 1 && (

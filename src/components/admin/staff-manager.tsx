@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminMemberLink } from "@/components/admin/entity-links";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,7 +86,7 @@ export function StaffManager() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-olive-950">{u.name}</p>
+                        <p><AdminMemberLink userId={u.id} name={u.name} /></p>
                         <StatusBadge status={u.status} />
                       </div>
                       <p className="truncate text-sm text-muted-foreground">{u.email}</p>

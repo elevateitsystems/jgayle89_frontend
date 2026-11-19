@@ -60,7 +60,7 @@ To connect: have the backend create a Checkout Session and return its URL, set `
 
 ## Demo accounts (sign-in page)
 
-`admin@` · `staff@` (all permissions) · `veteran@` · `civilian@` · `owner@` (3 businesses on Pro / Free / Growth) — all `@sitrep.demo`, any 8+ character password.
+`admin@` · `staff@` (all operational permissions; not the admin-only structure permissions) · `veteran@` · `civilian@` · `owner@` (3 businesses on Pro / Free / Growth) — all `@sitrep.demo`, any 8+ character password.
 Admin → Settings → **Reset demo data** restores all seed data.
 
 ## Known limitations
@@ -69,5 +69,54 @@ Admin → Settings → **Reset demo data** restores all seed data.
 * Business Owner accounts can't self-register or claim a business yet (ownership is seeded).
 * Included plan advertising allowances are configured and displayed but not redeemed (that needs billing).
 * Promotional credits are shown and applied in the order summary but not consumed.
-* The public Benefits pages remain behind the existing phase flag (`siteConfig.features.benefits`); members see the catalogue in their dashboard.
+* ~~The public Benefits pages remain behind the phase flag~~ — switched on by the 2026-11 update (see below).
 * Seed dates are relative to "today" in the browser, so campaign states shift as real time passes.
+
+---
+
+# Client update — November 2026 (frontend only)
+
+Implements the client's "additional requests" letter. Still **frontend only, on mock data in `localStorage`**:
+no API endpoints, models or migrations were created, and nothing below is connected to a backend. Storage version
+was bumped to `v4` (`lib/demo-store.ts`) so browsers re-seed.
+
+## What changed, by section of the letter
+
+| § | Feature | Where |
+|---|---|---|
+| 1A | Military profile: branch (6), service status (5), Disabled / Combat / Purple Heart, start & end month/year with "best estimate", city/state/ZIP | `types/profile.ts`, `features/profile/profile.ts` (rules, tested), `components/auth/user-type-fields.tsx` (registration + profile settings) |
+| 1B | "I am a First Responder" + category, shown as a badge (no separate tier) | same; `components/account/member-identity.tsx` |
+| 2A | Public Benefits Directory (flag on): state, **military background**, category, federal/state filters; eligibility + availability on cards; staff add / edit / categorise / end date / activate / remove; veteran dashboard "Benefits Available in Your State"; plan-gated **Schedule an Appointment for Assistance** | `data/benefits.ts` (+ verified-URL federal family/other programs), `lib/benefit-filters.ts`, `services/benefit-admin-service.ts`, `features/benefits/hooks.ts`, `components/membership/assistance-button.tsx` |
+| 2B | Freebies & Discounts: homepage section, public `/freebies` (search, categories, countdown, expiry hidden), staff `/admin/freebies` | `features/offers/rules.ts`, `services/offer-service.ts`, `lib/mock-data/offers.ts` (fictional companies, `.example` links) |
+| 3 | Near Me (`/dashboard/near-me`): current location (falls back to ZIP when denied), ZIP, 10/25 mi, map + list with distance, category and link | `features/near-me/rules.ts`, `lib/mock-data/organizations.ts` (sample VFW/Legion/nonprofits + demo ZIP table), two sample *veteran-friendly* businesses |
+| 4A | Photos & videos by tier: Free = logo only; Growth/Pro/Executive add cover, gallery, videos. Limits are plan features (`cover_image`, `business_photos`, `business_videos`) editable in Admin → Membership Plans. Staff upload in the business form and Photos; owners submit via `/dashboard/media` (edit request) | `features/business/media.ts` |
+| 4B | Staff edit social links; TikTok and X added | `components/admin/listing-extras-editor.tsx`, `schemas/edit-request.ts` |
+| 4C | Business offers with approval workflow: Pending / Approved / Published / Rejected (+ Deactivated, Expired), admin-configurable rule per origin (staff / owner / both), owner "request to speak with staff", internal staff notes, public countdown | `features/offers/rules.ts`, `services/offer-service.ts`, `/admin/business-offers`, owner `/dashboard/promotions`, settings |
+| 5 | Badges: on/off per assignment, remove, create/edit types (grantable), **"Verified Business" auto-awarded to paid business plans** (derived, configurable per badge type); all other verification badges still need review | `features/badges/rules.ts` + `hooks.ts`, `components/badges/badges-admin.tsx` |
+| 6 | Services marketplace: member `/dashboard/services` and business `/dashboard/business-services` (Free included), Coming Soon, eligible tiers, promotions (% off, $ off, months free, free consultation, member price, coupon codes) scoped by tier/service/period, staff *request* discounts without `services.discounts`, every purchase creates an order (Pending / Scheduled / In Progress / Completed) | `features/services/pricing.ts`, `services/marketplace-service.ts`, `/admin/services`, `/admin/service-orders` |
+| 7A | Business analytics only on **Pro** and **Executive** (plan features); admins see any business at `/admin/business-analytics` | `lib/mock-data/membership.ts`, `components/admin/business-analytics-admin.tsx` |
+| 7B | Admin reports: listings added/updated per employee (today / week / month / year / custom), appointment metrics by status, type, employee and period, with drill-down links | `features/analytics/rules.ts`, `components/admin/operations-reports.tsx`, `/admin/appointments` |
+| 8 | Clickable business and member names across admin tables → management page or new member page `/admin/users/[id]` | `components/admin/entity-links.tsx`, `components/admin/member-detail-admin.tsx` |
+| 9 | Public registration on/off (Admin → Settings): hides sign-up buttons, blocks the form and the service; sign-in unaffected | `services/settings-service.ts`, `components/auth/registration-gate.tsx` |
+| 11 | Categories & subcategories: primary + extra categories and subcategories per business, filters, create / rename / move / reorder / activate / show-in-filters, duplicate prevention, change history; owners pick existing ones via edit request | `features/categories/rules.ts`, `services/category-service.ts`, `components/admin/categories-manager.tsx` |
+| 11D | New grantable staff permissions — admin-only until granted: `categories.manage`, `subcategories.manage`, `badge_types.manage`; plus `offers.manage`, `services.manage`, `services.discounts`, `appointments.manage` | `lib/permissions.ts` |
+| 11E | Back-office audit log (who/what/when) for categories, badges, offers, benefits, services, settings, listings, appointments; `/admin/activity` | `services/audit-service.ts` |
+
+## Backend integration points added
+
+* `audit-service` → write audit rows server-side in the same transaction as each change.
+* `offer-service` (freebies + business offers) — approvals must be re-checked server-side against the settings rule and ownership.
+* `marketplace-service` — catalogue, promotions (approval), orders. **Checkout:** `purchase()` records the order then calls
+  `createCheckoutSession({ kind: "service" })`, which still returns `not_configured`; orders stay **Awaiting payment** until a
+  Stripe webhook marks them paid. Totals must be recomputed server-side (`features/services/pricing.ts` mirrors the rules).
+* `member-service.appointmentAdminService` — assignment and status for staff.
+* Near Me needs a **geocoding / ZIP service**; `lib/mock-data/organizations.ts#zipCentroids` is a small demo table.
+* Real veteran-organization listings (VFW, American Legion, nonprofits) must come from verified sources — the seed entries are fictional samples.
+* Business analytics remain generated sample data (`lib/mock-data/analytics.ts`).
+
+## Interpretations worth confirming with the client
+
+* **Media tiers apply to business memberships** (listings with an owner account). Staff-maintained listings without an owner keep their existing cover image; otherwise most of the directory would lose its photos.
+* **"Verified Business" for paid plans** is derived from the plan (no assignment record) so it disappears automatically if a plan lapses. Free listings can still earn it through review.
+* Editing a live business offer sends the new version for approval again; the old version stops showing in the meantime.
+* Benefit summaries are prototype text linked to official sources and labelled "Sample summary" until staff mark them verified.

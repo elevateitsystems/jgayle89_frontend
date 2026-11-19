@@ -7,6 +7,7 @@ import {
   filterBenefits,
   paginate,
   type BenefitFilters,
+  type BenefitIndexEntry,
 } from "@/lib/benefit-filters";
 import type { Benefit } from "@/types";
 
@@ -31,6 +32,13 @@ export interface BenefitSearchResult {
   page: number;
   pageCount: number;
   categoryCounts: Record<string, number>;
+}
+
+/** Search a prebuilt index — used by pages that read the live, staff-managed catalogue. */
+export function searchBenefitIndex(idx: BenefitIndexEntry[], filters: BenefitFilters, page: number, pageSize: number): BenefitSearchResult {
+  const matches = filterBenefits(idx, filters);
+  const paged = paginate(matches, page, pageSize);
+  return { items: paged.items, total: paged.total, page: paged.page, pageCount: paged.pageCount, categoryCounts: countByCategory(idx, filters) };
 }
 
 export function searchBenefits(filters: BenefitFilters, page: number, pageSize: number): BenefitSearchResult {

@@ -11,9 +11,16 @@ export interface BenefitFilters {
   q: string;
   state: string; // 2-letter code, "" = all
   category: string; // BenefitCategory id, "" = all
+  /** Military background (BenefitAudience id), "" = any. Programs without tags count as "veterans". */
+  audience?: string;
+  /** "federal" or "state" only, "" = both. */
+  scope?: string;
 }
 
-export const defaultBenefitFilters: BenefitFilters = { q: "", state: "", category: "" };
+export const defaultBenefitFilters: BenefitFilters = { q: "", state: "", category: "", audience: "", scope: "" };
+
+/** Hidden publicly once its end date has passed. `today` is an ISO date. */
+export const isBenefitCurrent = (b: Benefit, today: string) => !b.expiresOn || b.expiresOn >= today;
 
 export interface BenefitIndexEntry {
   benefit: Benefit;
@@ -55,6 +62,8 @@ export function filterBenefits(index: BenefitIndexEntry[], f: BenefitFilters): B
     const b = e.benefit;
     if (f.category && b.category !== f.category) continue;
     if (!matchesState(b, f.state)) continue;
+    if (f.scope && b.scope !== f.scope) continue;
+    if (f.audience && !(b.audiences ?? ["veterans"]).includes(f.audience as never)) continue;
 
     let score = 0;
     let ok = true;

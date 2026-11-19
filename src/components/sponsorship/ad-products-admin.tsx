@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink } from "@/components/admin/entity-links";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -193,7 +194,7 @@ function Credits() {
   const today = daysFromToday(0);
 
   const columns: Column<PromoCredit>[] = [
-    { id: "biz", header: "Business", sort: (c) => c.businessName, cell: (c) => <span className="block max-w-[14rem] truncate font-semibold text-olive-950">{c.businessName}</span> },
+    { id: "biz", header: "Business", sort: (c) => c.businessName, cell: (c) => <span className="block max-w-[14rem] truncate"><AdminBusinessLink businessId={c.businessId} name={c.businessName} /></span> },
     { id: "reason", header: "Reason", hideBelow: "md", cell: (c) => c.reason },
     { id: "amount", header: "Remaining", sort: (c) => c.remaining, cell: (c) => <span className="tabular-nums">{formatPrice(c.remaining)} <span className="text-xs text-muted-foreground">of {formatPrice(c.amount)}</span></span> },
     { id: "exp", header: "Expires", hideBelow: "sm", sort: (c) => c.expiresOn, cell: (c) => (c.expiresOn < today ? <StatusPill tone="neutral">Expired</StatusPill> : <span className="whitespace-nowrap text-muted-foreground">{formatDate(c.expiresOn)}</span>) },

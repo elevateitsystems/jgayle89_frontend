@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink } from "@/components/admin/entity-links";
 import { useMemo, useState } from "react";
 import { CalendarCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -67,10 +68,12 @@ export function CampaignReviewQueue({ family, title, description }: Props) {
     {
       id: "name", header: "Campaign", sort: (c) => c.name,
       cell: (c) => (
+        <span className="block">
         <button type="button" onClick={() => { setOpenId(c.id); setStart(c.requestedStart >= daysFromToday(0) ? c.requestedStart : daysFromToday(3)); }} className="block max-w-[15rem] text-left">
           <span className="block truncate font-semibold text-olive-950 hover:text-olive-700">{c.name}</span>
-          <span className="block truncate text-xs text-muted-foreground">{c.businessName}</span>
         </button>
+        <span className="block max-w-[15rem] truncate text-xs"><AdminBusinessLink businessId={c.businessId} name={c.businessName} className="font-medium" /></span>
+        </span>
       ),
     },
     { id: "product", header: "Product", hideBelow: "md", sort: (c) => productOf(c)?.name ?? "", cell: (c) => productOf(c)?.name ?? "—" },

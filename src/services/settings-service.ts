@@ -3,6 +3,9 @@ import type { SiteSettings } from "@/types";
 
 export const defaultSettings: SiteSettings = {
   showGoogleRatings: true,
+  registrationOpen: true,
+  // Mirrors the client's example: staff review what owners submit; owners confirm what staff create for them.
+  offerApproval: { ownerSubmitted: "staff", staffCreated: "owner" },
 };
 
 /** Single-record collection (the demo store holds arrays). */

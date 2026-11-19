@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink, AdminMemberLink } from "@/components/admin/entity-links";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { FileText } from "lucide-react";
@@ -38,10 +39,10 @@ export function VerificationQueue() {
     {
       id: "business", header: "Business", sort: (r) => r.businessName,
       cell: (r) => (
-        <button type="button" onClick={() => { setOpenId(r.id); setVerifiedOn(todayISO()); }} className="block max-w-[15rem] text-left">
-          <span className="block truncate font-semibold text-olive-950 hover:text-olive-700">{r.businessName}</span>
-          <span className="block truncate text-xs text-muted-foreground">by {r.requesterName}</span>
-        </button>
+        <span className="block max-w-[15rem]">
+          <span className="block truncate"><AdminBusinessLink businessId={r.businessId} name={r.businessName} /></span>
+          <span className="block truncate text-xs text-muted-foreground">by <AdminMemberLink userId={r.requesterId} name={r.requesterName} className="font-medium" /></span>
+        </span>
       ),
     },
     { id: "badge", header: "Badge", sort: (r) => badgeOf(r.badgeId)?.name ?? "", cell: (r) => { const b = badgeOf(r.badgeId); return b ? <BadgePill badge={b} /> : "—"; } },
@@ -55,7 +56,7 @@ export function VerificationQueue() {
 
   return (
     <>
-      <PageHeader title="Business verification" description={`${pending} request${pending === 1 ? "" : "s"} waiting. Badges are earned through review — membership never grants one.`} />
+      <PageHeader title="Business verification" description={`${pending} request${pending === 1 ? "" : "s"} waiting. Badges are earned through review (only “Verified Business” is automatic for paid plans).`} />
       <DataTable
         rows={rows}
         columns={columns}

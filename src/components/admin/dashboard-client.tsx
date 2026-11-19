@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink } from "@/components/admin/entity-links";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -205,7 +206,7 @@ export function DashboardClient() {
                   <Image src={b.coverImage} alt="" fill sizes="48px" className="object-cover" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-olive-950">{b.name}</p>
+                  <p className="truncate text-sm"><AdminBusinessLink businessId={b.id} name={b.name} /></p>
                   <p className="truncate text-xs text-muted-foreground">
                     {categoryById(b.category)?.name} · {b.city}, {b.state}
                   </p>

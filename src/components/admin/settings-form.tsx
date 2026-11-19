@@ -9,12 +9,50 @@ import { settingsService } from "@/services/settings-service";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { resetAllDemoData } from "@/services/demo-reset";
+import { NativeSelect } from "@/components/ui/native-select";
+import { useSession } from "@/hooks/use-session";
+import { auditService } from "@/services/audit-service";
+import type { ApprovalRule, OfferApprovalSettings } from "@/types";
+
+const RULE_LABEL: Record<ApprovalRule, string> = {
+  staff: "Staff approval required",
+  owner: "Business owner approval required",
+  both: "Both staff and business owner approval required",
+};
 
 export function SettingsForm() {
   const settings = useSiteSettings();
   const [saving, setSaving] = useState(false);
   const switchId = useId();
+  const regId = useId();
   const [confirmReset, setConfirmReset] = useState(false);
+  const user = useSession();
+
+  async function toggleRegistration(next: boolean) {
+    setSaving(true);
+    try {
+      await settingsService.update({ registrationOpen: next });
+      if (user) auditService.record(user, "settings", next ? "opened registration" : "closed registration", { id: "registration", name: "Public registration" });
+      toast.success(next ? "Registration is open — new members can sign up." : "Registration is closed. Existing members can still sign in.");
+    } catch {
+      toast.error("Couldn't save the setting. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function setRule(key: keyof OfferApprovalSettings, rule: ApprovalRule) {
+    setSaving(true);
+    try {
+      await settingsService.update({ offerApproval: { ...settings.offerApproval, [key]: rule } });
+      if (user) auditService.record(user, "settings", "changed offer approval rule", { id: key, name: key === "ownerSubmitted" ? "Owner-submitted offers" : "Staff-created offers" }, RULE_LABEL[rule]);
+      toast.success("Approval rule saved", { description: "Applies to offers submitted from now on." });
+    } catch {
+      toast.error("Couldn't save the rule.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function toggleGoogle(next: boolean) {
     setSaving(true);
@@ -30,7 +68,37 @@ export function SettingsForm() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Site-wide options that apply to every business profile." />
+      <PageHeader title="Settings" description="Site-wide options: registration, offer approvals and ratings." />
+      <section aria-labelledby="reg-settings-h" className="mb-6 max-w-2xl rounded-lg border bg-card p-5 shadow-card sm:p-6">
+        <h2 id="reg-settings-h" className="text-lg font-semibold text-olive-950">Public registration</h2>
+        <div className="mt-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <label htmlFor={regId} className="text-sm font-medium text-olive-950">Allow new account registrations</label>
+            <p className="mt-1 text-sm text-muted-foreground">
+              When off, sign-up buttons are hidden and the registration form is blocked. Existing members still sign in and use their accounts,
+              and administrators keep full access. The rest of the website stays open.
+            </p>
+          </div>
+          <Switch id={regId} checked={settings.registrationOpen} disabled={saving} onCheckedChange={toggleRegistration} aria-label="Allow new account registrations" />
+        </div>
+      </section>
+      <section aria-labelledby="offer-settings-h" className="mb-6 max-w-2xl rounded-lg border bg-card p-5 shadow-card sm:p-6">
+        <h2 id="offer-settings-h" className="text-lg font-semibold text-olive-950">Business offer approvals</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Who must approve a business discount or special offer before it goes public. The person who submits an offer counts as having approved it.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {([
+            ["ownerSubmitted", "Offers a business submits itself"],
+            ["staffCreated", "Offers staff create for a business"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="block text-sm">
+              <span className="font-medium text-olive-950">{label}</span>
+              <NativeSelect className="mt-1.5" value={settings.offerApproval[key]} disabled={saving} onChange={(e) => setRule(key, e.target.value as ApprovalRule)} aria-label={label}>
+                {(Object.keys(RULE_LABEL) as ApprovalRule[]).map((r) => <option key={r} value={r}>{RULE_LABEL[r]}</option>)}
+              </NativeSelect>
+            </label>
+          ))}
+        </div>
+      </section>
       <section aria-labelledby="ratings-settings-h" className="max-w-2xl rounded-lg border bg-card p-5 shadow-card sm:p-6">
         <h2 id="ratings-settings-h" className="text-lg font-semibold text-olive-950">Ratings</h2>
         <div className="mt-4 flex items-start justify-between gap-4">

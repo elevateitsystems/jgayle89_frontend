@@ -5,18 +5,18 @@ import { ExternalLink, Landmark, Search } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { CategoryBadge, DataStatusBadge, ScopeBadge } from "@/components/benefits/benefit-badges";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AssistanceButton } from "@/components/membership/assistance-button";
 import { FeatureAccessIndicator } from "@/components/membership/feature-access";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { benefitCategories } from "@/data/benefit-categories";
+import { benefitAudiences, benefitCategories } from "@/data/benefit-categories";
+import { usePublicBenefits } from "@/features/benefits/hooks";
 import { US_STATES, stateName } from "@/data/us-states";
 import { useAllPlans, useResolvedPlan } from "@/features/membership/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSession } from "@/hooks/use-session";
-import { useStore } from "@/hooks/use-store";
 import { buildBenefitIndex, filterBenefits, paginate } from "@/lib/benefit-filters";
 import { cn } from "@/lib/utils";
-import { baseBenefits, benefitOverrideStore, mergeBenefits } from "@/services/benefit-admin-service";
 
 const PAGE_SIZE = 8;
 
@@ -28,26 +28,40 @@ export function MemberBenefits() {
   const user = useSession();
   const plan = useResolvedPlan("veteran", user?.id);
   const plans = useAllPlans();
-  const overrides = useStore(benefitOverrideStore);
+  const catalogue = usePublicBenefits();
+  const homeState = user?.location?.state ?? "";
   const [q, setQ] = useState("");
-  const [state, setState] = useState("");
+  // Defaults to the state saved in the member's profile; federal programs are always included.
+  const [state, setState] = useState(homeState);
+  const [audience, setAudience] = useState("");
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(1);
   const debouncedQ = useDebouncedValue(q, 150);
 
-  const index = useMemo(
-    () => buildBenefitIndex(mergeBenefits(baseBenefits, overrides).filter((m) => m.published).map((m) => m.benefit), stateName),
-    [overrides],
-  );
-  const results = useMemo(() => filterBenefits(index, { q: debouncedQ, state, category }), [index, debouncedQ, state, category]);
+  const index = useMemo(() => buildBenefitIndex(catalogue, stateName), [catalogue]);
+  // filterBenefits ranks the selected state's own programs ahead of federal ones.
+  const results = useMemo(() => filterBenefits(index, { q: debouncedQ, state, category, audience }), [index, debouncedQ, state, category, audience]);
   const paged = paginate(results, page, PAGE_SIZE);
-  const reset = () => { setQ(""); setState(""); setCategory(""); setPage(1); };
+  const reset = () => { setQ(""); setState(homeState); setCategory(""); setAudience(""); setPage(1); };
+  const viewingHome = !!homeState && state === homeState;
 
   return (
     <>
-      <PageHeader title="Benefits directory" description="Federal programs nationwide plus state programs. Always confirm eligibility on the official source before you apply." />
+      <PageHeader
+        title={viewingHome ? `Benefits Available in Your State` : "Benefits directory"}
+        description={
+          viewingHome
+            ? `${stateName(homeState)} programs first, followed by federal programs available nationwide. Choose another state to search elsewhere.`
+            : "Federal programs nationwide plus state programs. Always confirm eligibility on the official source before you apply."
+        }
+      />
+      {!homeState && (
+        <p className="mb-4 rounded-md border border-sand-300 bg-sand-100 px-3 py-2 text-sm text-sand-700">
+          Add your state in <a href="/dashboard/settings" className="font-semibold underline">Account Settings</a> to see benefits available in your state first.
+        </p>
+      )}
 
-      <div className="mb-6 grid gap-3 rounded-lg border bg-card p-4 shadow-card md:grid-cols-[1fr_220px_220px]">
+      <div className="mb-6 grid gap-3 rounded-lg border bg-card p-4 shadow-card md:grid-cols-2 xl:grid-cols-[1fr_200px_200px_200px]">
         <label className="relative flex items-center">
           <span className="sr-only">Search benefits</span>
           <Search className="pointer-events-none absolute left-3 size-4 text-olive-600" aria-hidden />
@@ -55,7 +69,11 @@ export function MemberBenefits() {
         </label>
         <NativeSelect aria-label="State" value={state} onChange={(e) => { setState(e.target.value); setPage(1); }}>
           <option value="">All states</option>
-          {US_STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+          {US_STATES.map((s) => <option key={s.code} value={s.code}>{s.name}{s.code === homeState ? " (your state)" : ""}</option>)}
+        </NativeSelect>
+        <NativeSelect aria-label="Military background" value={audience} onChange={(e) => { setAudience(e.target.value); setPage(1); }}>
+          <option value="">Any background</option>
+          {benefitAudiences.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </NativeSelect>
         <NativeSelect aria-label="Category" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
           <option value="">All categories</option>
@@ -79,9 +97,13 @@ export function MemberBenefits() {
                 <h2 className="mt-3 font-sans text-lg font-semibold leading-snug text-olive-950">{b.title}</h2>
                 <p className="mt-1 text-xs font-medium text-muted-foreground">{b.agency}</p>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-foreground/80">{b.summary}</p>
-                <a href={b.applyUrl ?? b.sourceUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }), "mt-4 w-fit")}>
-                  Official source <ExternalLink className="size-3.5" aria-hidden /><span className="sr-only"> (opens in a new tab)</span>
-                </a>
+                {b.eligibility[0] && <p className="mt-2 text-xs text-foreground/75"><span className="font-semibold text-olive-900">Basic eligibility:</span> {b.eligibility[0]}</p>}
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <a href={b.applyUrl ?? b.sourceUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }), "w-fit")}>
+                    Official source <ExternalLink className="size-3.5" aria-hidden /><span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                  <AssistanceButton context={{ kind: "benefit", id: b.id, title: b.title }} />
+                </div>
               </article>
             </li>
           ))}

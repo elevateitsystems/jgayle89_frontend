@@ -1,6 +1,6 @@
 import type { Category } from "@/types";
 
-export const categories: Category[] = [
+const primaries: Category[] = [
   {
     id: "food-drink",
     name: "Food & Drink",
@@ -71,6 +71,54 @@ export const categories: Category[] = [
     icon: "scissors",
     image: "/images/barber.jpg",
   },
+];
+
+/**
+ * Subcategories (client update §11A). Each belongs to one primary category via `parentId`; admins can rename,
+ * move, reorder, hide from filters or deactivate them without code changes.
+ */
+const SUBS: Record<string, string[]> = {
+  "food-drink": ["Restaurants", "Cafés", "Catering", "Bakeries", "Food Trucks", "Breweries"],
+  "construction-trades": ["Plumbing", "Electrical", "Roofing", "HVAC", "General Contracting", "Welding & Fabrication"],
+  "automotive-transport": ["Auto Repair", "Trucking & Freight"],
+  "professional-services": ["Accounting", "Legal Services", "Consulting", "Marketing", "Business Development", "Financial Planning"],
+  technology: ["Cybersecurity", "Web & Software"],
+  "health-fitness": ["Gyms & Training", "Yoga & Recovery"],
+  "home-real-estate": ["Landscaping", "Real Estate", "Home Security", "Hardware & Supplies"],
+  "outdoors-recreation": ["Guided Trips", "Outdoor Gear"],
+  "creative-media": ["Photography & Video"],
+  "personal-services": ["Barbers & Salons", "Dental & Health Care"],
+  "community-resources": ["Legal Aid", "Financial Counseling", "Veteran Support"],
+};
+
+export const subId = (name: string) => `sub-${name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+
+const withPrimary = [
+  ...primaries,
+  {
+    id: "community-resources",
+    name: "Community Resources & Assistance",
+    description: "Legal aid, financial counseling and other veteran support services.",
+    icon: "handshake",
+    image: "/images/handshake.jpg",
+  },
+].map((c, i) => ({ ...c, parentId: null, active: true, showInFilters: true, sortOrder: (i + 1) * 10 }));
+
+export const categories: Category[] = [
+  ...withPrimary,
+  ...withPrimary.flatMap((p) =>
+    (SUBS[p.id] ?? []).map((name, i) => ({
+      id: subId(name),
+      name,
+      description: `${name} — part of ${p.name}.`,
+      icon: p.icon,
+      image: p.image,
+      parentId: p.id,
+      active: true,
+      showInFilters: true,
+      sortOrder: (i + 1) * 10,
+    })),
+  ),
 ];
 
 export const categoryById = (id: string) => categories.find((c) => c.id === id);

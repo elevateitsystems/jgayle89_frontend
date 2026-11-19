@@ -16,7 +16,7 @@ import { delay } from "@/lib/demo-store";
 /** Flip to true only once the backend checkout endpoint exists. */
 export const STRIPE_CONFIGURED = false;
 
-export type CheckoutKind = "membership" | "advertising";
+export type CheckoutKind = "membership" | "advertising" | "service";
 
 export interface CheckoutRequest {
   kind: CheckoutKind;

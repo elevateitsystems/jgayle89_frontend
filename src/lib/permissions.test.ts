@@ -45,9 +45,12 @@ describe("navigation per access group", () => {
     const all = staff([...ALL_PERMISSION_IDS]);
     assert.deepEqual(
       [...ids(all)].sort(),
-      ["advertising-reviews", "badges", "benefits", "businesses", "dashboard", "edit-requests", "events", "import", "photos", "sponsorship-approvals", "users", "verification"],
+      [
+        "advertising-reviews", "appointments", "badges", "benefits", "business-offers", "businesses", "categories", "dashboard", "edit-requests",
+        "events", "freebies", "import", "photos", "service-orders", "services", "sponsorship-approvals", "users", "verification",
+      ],
     );
-    for (const adminOnly of ["staff", "categories", "plans", "subscriptions", "ad-products", "campaigns", "payments", "reports", "settings"]) {
+    for (const adminOnly of ["staff", "business-analytics", "activity", "plans", "subscriptions", "ad-products", "campaigns", "payments", "reports", "settings"]) {
       assert.ok(!ids(all).includes(adminOnly as never), adminOnly);
     }
   });
@@ -103,16 +106,35 @@ describe("route protection", () => {
   });
 });
 
+describe("structure permissions (client section 11-D)", () => {
+  it("only admins can manage categories and badge types by default", () => {
+    const standard = staff(["businesses.manage", "badges.manage"]);
+    assert.equal(adminAccessState(standard, "/admin/categories"), "forbidden-permission");
+    assert.equal(hasPermission(standard, "badge_types.manage"), false);
+    assert.equal(hasPermission(admin, "categories.manage"), true);
+  });
+  it("can be granted one at a time (subcategories without badges)", () => {
+    const s = staff(["subcategories.manage"]);
+    assert.equal(adminAccessState(s, "/admin/categories"), "allowed");
+    assert.equal(hasPermission(s, "categories.manage"), false);
+    assert.equal(hasPermission(s, "badge_types.manage"), false);
+    assert.equal(adminAccessState(s, "/admin/badges"), "forbidden-permission");
+  });
+});
+
 describe("permissions registry", () => {
   it("offers every grantable permission and drops unknown ones", () => {
     assert.deepEqual([...ALL_PERMISSION_IDS].sort(), [
-      "advertising.review", "badges.manage", "benefits.manage", "businesses.manage", "csv.import", "edits.review", "events.manage",
-      "photos.upload", "sponsorships.review", "users.manage", "verification.review",
+      "advertising.review", "appointments.manage", "badge_types.manage", "badges.manage", "benefits.manage", "businesses.manage",
+      "categories.manage", "csv.import", "edits.review", "events.manage", "offers.manage", "photos.upload", "services.discounts",
+      "services.manage", "sponsorships.review", "subcategories.manage", "users.manage", "verification.review",
     ]);
-    assert.deepEqual(sanitizePermissions(["events.manage", "orders.manage", "appointments.manage", "resources.manage", "nope"]), ["events.manage"]);
+    assert.deepEqual(sanitizePermissions(["events.manage", "orders.manage", "resources.manage", "nope"]), ["events.manage"]);
   });
   it("every permission unlocks at least one section, so none is a dead switch", () => {
-    for (const p of ALL_PERMISSION_IDS) assert.ok(ADMIN_SECTIONS.some((s) => s.requires.kind === "permission" && s.requires.permission === p), p);
+    const unlocks = (s: (typeof ADMIN_SECTIONS)[number], p: string) =>
+      (s.requires.kind === "permission" && s.requires.permission === p) || (s.requires.kind === "any" && (s.requires.permissions as string[]).includes(p));
+    for (const p of ALL_PERMISSION_IDS) assert.ok(ADMIN_SECTIONS.some((s) => unlocks(s, p)), p);
   });
 });
 

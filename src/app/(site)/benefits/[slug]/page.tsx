@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BenefitDetail } from "@/components/benefits/benefit-detail";
+import { BenefitDetailBySlug } from "@/components/benefits/benefit-detail";
 import { siteConfig } from "@/config/site";
 import { benefits } from "@/data/benefits";
 
@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: PageProps<"/benefits/[slug]">
 
 export default async function BenefitPage({ params }: PageProps<"/benefits/[slug]">) {
   const { slug } = await params;
-  const benefit = siteConfig.features.benefits ? benefits.find((x) => x.slug === slug) : undefined;
-  if (!benefit) notFound();
-  return <BenefitDetail benefit={benefit} />;
+  if (!siteConfig.features.benefits) notFound();
+  // Staff-added programs aren't in the static list, so the client resolves them from the live catalogue.
+  return <BenefitDetailBySlug slug={slug} initial={benefits.find((x) => x.slug === slug)} />;
 }

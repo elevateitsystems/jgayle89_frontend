@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { siteConfig } from "@/config/site";
 import { useSession } from "@/hooks/use-session";
+import { useRegistrationOpen } from "@/hooks/use-settings";
 import { authService } from "@/services/auth-service";
 import { ROLE_LABEL, USER_TYPE_LABEL, homePathFor } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const session = useSession();
+  const registrationOpen = useRegistrationOpen();
   const [open, setOpen] = useState(false);
   /** e.g. "Veteran / Military" for members, "Staff" / "Administrator" for the back office. */
   const roleLine = session ? (session.role === "user" && session.userType ? USER_TYPE_LABEL[session.userType] : ROLE_LABEL[session.role]) : "";
@@ -96,9 +98,11 @@ export function SiteHeader() {
               <Link href="/login" className={buttonVariants({ variant: "ghost" })}>
                 Sign in
               </Link>
-              <Link href="/register" className={buttonVariants()}>
-                Join the community
-              </Link>
+              {registrationOpen && (
+                <Link href="/register" className={buttonVariants()}>
+                  Join the community
+                </Link>
+              )}
             </>
           )}
         </div>
@@ -154,9 +158,11 @@ export function SiteHeader() {
                 </>
               ) : (
                 <>
-                  <SheetClose nativeButton={false} render={<Link href="/register" className={buttonVariants({ size: "lg" })} />}>
-                    Join the community
-                  </SheetClose>
+                  {registrationOpen && (
+                    <SheetClose nativeButton={false} render={<Link href="/register" className={buttonVariants({ size: "lg" })} />}>
+                      Join the community
+                    </SheetClose>
+                  )}
                   <SheetClose nativeButton={false} render={<Link href="/login" className={buttonVariants({ variant: "outline", size: "lg" })} />}>
                     Sign in
                   </SheetClose>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink, AdminMemberLink } from "@/components/admin/entity-links";
 import { useMemo, useState } from "react";
 import { Loader2, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -49,7 +50,12 @@ export function SubscriptionsAdmin() {
   );
 
   const columns: Column<Subscription>[] = [
-    { id: "subject", header: "Account", sort: (s) => subjectName(s), cell: (s) => <span className="block max-w-[14rem]"><span className="block truncate font-semibold text-olive-950">{subjectName(s)}</span><span className="block truncate text-xs text-muted-foreground">{AUDIENCE_LABEL[s.audience]}{s.audience === "business" ? ` · ${ownerName(s)}` : ""}</span></span> },
+    { id: "subject", header: "Account", sort: (s) => subjectName(s), cell: (s) => (
+      <span className="block max-w-[14rem]">
+        <span className="block truncate">{s.audience === "business" ? <AdminBusinessLink businessId={s.subjectId} name={subjectName(s)} /> : <AdminMemberLink userId={s.subjectId} name={subjectName(s)} />}</span>
+        <span className="block truncate text-xs text-muted-foreground">{AUDIENCE_LABEL[s.audience]}{s.audience === "business" ? <> · <AdminMemberLink userId={s.ownerId} name={ownerName(s)} className="font-medium" /></> : ""}</span>
+      </span>
+    ) },
     { id: "plan", header: "Plan", sort: (s) => planName(s.planId), cell: (s) => <span>{planName(s.planId)}{s.scheduledPlanId && <span className="block text-xs text-muted-foreground">→ {planName(s.scheduledPlanId)} at renewal</span>}</span> },
     { id: "price", header: "Billing", hideBelow: "md", sort: (s) => { const p = plans.find((x) => x.id === s.planId); return p ? priceFor(p, s.cycle) : 0; }, cell: (s) => { const p = plans.find((x) => x.id === s.planId); return p ? <span className="whitespace-nowrap tabular-nums">{formatPrice(priceFor(p, s.cycle))} / {s.cycle === "annual" ? "yr" : "mo"}</span> : "—"; } },
     { id: "renews", header: "Renews", hideBelow: "lg", sort: (s) => s.renewsOn ?? "", cell: (s) => <span className="whitespace-nowrap text-muted-foreground">{s.renewsOn ? formatDate(s.renewsOn) : "—"}</span> },

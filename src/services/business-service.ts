@@ -1,7 +1,12 @@
 import { businesses as seed } from "@/data/businesses";
 import { createCollectionStore, delay } from "@/lib/demo-store";
 import { newId, uniqueSlug } from "@/lib/slug";
-import type { Business } from "@/types";
+import { auditService } from "@/services/audit-service";
+import type { AppUser, Business } from "@/types";
+
+/** The employee making the change — feeds the "added / updated by each employee" admin reports. */
+type Actor = Pick<AppUser, "id" | "name">;
+const today = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Business data-access layer (demo implementation).
@@ -28,20 +33,22 @@ export const businessService = {
     return businessStore.getSnapshot().find((b) => b.id === id);
   },
 
-  async create(input: BusinessInput): Promise<Business> {
+  async create(input: BusinessInput, actor?: Actor): Promise<Business> {
     await delay(500);
     const all = businessStore.getSnapshot();
     const business: Business = {
       ...input,
       id: newId("biz"),
       slug: uniqueSlug(input.slug || input.name, all.map((b) => b.slug)),
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: today(),
+      ...(actor ? { createdBy: actor.id } : {}),
     };
     businessStore.set([business, ...all]);
+    if (actor) auditService.record(actor, "businesses", "added listing", { id: business.id, name: business.name });
     return business;
   },
 
-  async createMany(inputs: BusinessInput[]): Promise<Business[]> {
+  async createMany(inputs: BusinessInput[], actor?: Actor): Promise<Business[]> {
     await delay(700);
     const all = businessStore.getSnapshot();
     const taken = all.map((b) => b.slug);
@@ -52,22 +59,25 @@ export const businessService = {
         ...input,
         slug,
         id: newId("biz"),
-        createdAt: new Date().toISOString().slice(0, 10),
+        createdAt: today(),
+        ...(actor ? { createdBy: actor.id } : {}),
       } satisfies Business;
     });
     businessStore.set([...created, ...all]);
+    if (actor) created.forEach((b) => auditService.record(actor, "businesses", "added listing", { id: b.id, name: b.name }, "CSV import"));
     return created;
   },
 
-  async update(id: string, patch: Partial<BusinessInput>): Promise<Business> {
+  async update(id: string, patch: Partial<BusinessInput>, actor?: Actor): Promise<Business> {
     await delay(500);
     const all = businessStore.getSnapshot();
     const current = all.find((b) => b.id === id);
     if (!current) throw new Error("Business not found");
     const others = all.filter((b) => b.id !== id).map((b) => b.slug);
     const slug = patch.slug ? uniqueSlug(patch.slug, others) : current.slug;
-    const next: Business = { ...current, ...patch, slug };
+    const next: Business = { ...current, ...patch, slug, ...(actor ? { updatedBy: actor.id, updatedAt: today() } : {}) };
     businessStore.set(all.map((b) => (b.id === id ? next : b)));
+    if (actor) auditService.record(actor, "businesses", "updated listing", { id, name: next.name });
     return next;
   },
 

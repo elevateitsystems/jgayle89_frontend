@@ -22,7 +22,9 @@ interface Props {
 }
 
 export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }: Props) {
-  const { categories } = useCategories();
+  const { categories: all, subcategoriesOf } = useCategories();
+  // Only categories marked "show in search filters" (Admin → Business Categories) appear here.
+  const categories = all.filter((c) => c.showInFilters !== false);
   const { badges, counts: badgeCounts } = useBadgeLookup();
   const activeBadges = badges.filter((b) => b.active).sort((a, b) => a.sortOrder - b.sortOrder);
   return (
@@ -31,18 +33,37 @@ export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }
         <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-olive-700">Category</legend>
         <ul className="space-y-0.5">
           <li>
-            <CategoryRow label="All categories" count={total} active={!filters.category} onClick={() => onChange({ category: "" })} />
+            <CategoryRow label="All categories" count={total} active={!filters.category} onClick={() => onChange({ category: "", subcategory: "" })} />
           </li>
-          {categories.map((c) => (
-            <li key={c.id}>
-              <CategoryRow
-                label={c.name}
-                count={counts[c.id] ?? 0}
-                active={filters.category === c.id}
-                onClick={() => onChange({ category: filters.category === c.id ? "" : c.id })}
-              />
-            </li>
-          ))}
+          {categories.map((c) => {
+            const selected = filters.category === c.id;
+            const subs = selected ? subcategoriesOf(c.id, { activeOnly: true, filtersOnly: true }) : [];
+            return (
+              <li key={c.id}>
+                <CategoryRow
+                  label={c.name}
+                  count={counts[c.id] ?? 0}
+                  active={selected && !filters.subcategory}
+                  onClick={() => onChange({ category: selected && !filters.subcategory ? "" : c.id, subcategory: "" })}
+                />
+                {subs.length > 0 && (
+                  <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-sand-300 pl-2" aria-label={`${c.name} subcategories`}>
+                    {subs.map((s) => (
+                      <li key={s.id}>
+                        <CategoryRow
+                          small
+                          label={s.name}
+                          count={counts[s.id] ?? 0}
+                          active={filters.subcategory === s.id}
+                          onClick={() => onChange({ subcategory: filters.subcategory === s.id ? "" : s.id })}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </fieldset>
 
@@ -121,14 +142,15 @@ export function FilterPanel({ filters, counts, total, onChange, idPrefix = "f" }
   );
 }
 
-function CategoryRow({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
+function CategoryRow({ label, count, active, onClick, small }: { label: string; count: number; active: boolean; onClick: () => void; small?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex min-h-10 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+        "flex w-full items-center justify-between rounded-md px-3 text-left transition-colors",
+        small ? "min-h-9 py-1.5 text-[13px]" : "min-h-10 py-2 text-sm",
         active ? "bg-olive-700 font-semibold text-white" : "text-foreground hover:bg-olive-100",
       )}
     >

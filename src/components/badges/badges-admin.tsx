@@ -22,26 +22,38 @@ import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { useBadgeAssignments, useBadges } from "@/features/badges/hooks";
 import { useBusinesses } from "@/hooks/use-businesses";
 import { useSession } from "@/hooks/use-session";
+import { AuditLogPanel } from "@/components/admin/audit-log";
+import { AdminBusinessLink } from "@/components/admin/entity-links";
 import { formatDate, todayISO } from "@/lib/date";
-import { isAdmin } from "@/lib/permissions";
+import { hasPermission, isAdmin } from "@/lib/permissions";
 import { assignBadgeSchema, badgeSchema, revokeSchema, type AssignBadgeValues, type BadgeFormValues } from "@/schemas/badge";
 import { badgeService } from "@/services/badge-service";
 import type { BadgeAssignment, BusinessBadge } from "@/types";
 
-/** Admin & Staff → Business Badges. Staff assign/revoke; only admins create or edit badge types. */
+/**
+ * Admin & Staff → Business Badges (client update §5, §11C). Assigning, switching off and removing badges needs
+ * "Manage business badges"; creating and editing badge types needs "Create & edit badge types" (admins by default).
+ */
 export function BadgesAdmin() {
   const user = useSession();
   const admin = isAdmin(user);
+  const canAssign = hasPermission(user, "badges.manage");
+  const canTypes = hasPermission(user, "badge_types.manage");
   return (
     <>
-      <PageHeader title={admin ? "Business badges" : "Badge management"} description="Badges are assigned by staff after review. Membership status never grants a badge." />
-      <Tabs defaultValue="assignments">
-        <TabsList className="mb-4 h-auto p-1">
-          <TabsTrigger value="assignments" className="h-9 px-4">Assignments</TabsTrigger>
+      <PageHeader
+        title={admin ? "Business badges" : "Badge management"}
+        description="Verification badges are assigned by staff after review. The only automatic badge is the one marked “auto-award to paid plans” (Verified Business)."
+      />
+      <Tabs defaultValue={canAssign ? "assignments" : "types"}>
+        <TabsList className="mb-4 h-auto max-w-full flex-wrap justify-start p-1">
+          {canAssign && <TabsTrigger value="assignments" className="h-9 px-4">Assignments</TabsTrigger>}
           <TabsTrigger value="types" className="h-9 px-4">Badge types</TabsTrigger>
+          <TabsTrigger value="history" className="h-9 px-4">Change history</TabsTrigger>
         </TabsList>
-        <TabsContent value="assignments"><Assignments /></TabsContent>
-        <TabsContent value="types"><BadgeTypes canEdit={admin} /></TabsContent>
+        {canAssign && <TabsContent value="assignments"><Assignments /></TabsContent>}
+        <TabsContent value="types"><BadgeTypes canEdit={canTypes} /></TabsContent>
+        <TabsContent value="history"><AuditLogPanel areas={["badges"]} limit={25} /></TabsContent>
       </Tabs>
     </>
   );
@@ -61,11 +73,26 @@ function Assignments() {
   const rows = useMemo(() => assignments.filter((a) => !filter || a.badgeId === filter), [assignments, filter]);
 
   const columns: Column<BadgeAssignment>[] = [
-    { id: "biz", header: "Business", sort: (a) => nameOf(a.businessId), cell: (a) => <span className="block max-w-[14rem] truncate font-semibold text-olive-950">{nameOf(a.businessId)}</span> },
+    { id: "biz", header: "Business", sort: (a) => nameOf(a.businessId), cell: (a) => <span className="block max-w-[14rem] truncate"><AdminBusinessLink businessId={a.businessId} /></span> },
     { id: "badge", header: "Badge", sort: (a) => badgeOf(a.badgeId)?.name ?? "", cell: (a) => { const b = badgeOf(a.badgeId); return b ? <BadgePill badge={b} /> : a.badgeId; } },
     { id: "verified", header: "Verified", hideBelow: "md", sort: (a) => a.verifiedOn, cell: (a) => <span className="whitespace-nowrap text-muted-foreground">{formatDate(a.verifiedOn)} · {a.verifiedBy}</span> },
-    { id: "status", header: "Status", sort: (a) => a.status, cell: (a) => (a.status === "active" ? <StatusPill tone="good">Active</StatusPill> : <span title={a.revokedReason}><StatusPill tone="bad">Revoked</StatusPill></span>) },
-    { id: "act", header: "Actions", srOnlyHeader: true, cell: (a) => a.status === "active" && <Button variant="ghost" size="sm" onClick={() => setRevoking(a)}><ShieldOff /> Revoke</Button> },
+    { id: "status", header: "Status", sort: (a) => (a.status === "active" ? (a.hidden ? "off" : "active") : "revoked"), cell: (a) => (a.status !== "active" ? <span title={a.revokedReason}><StatusPill tone="bad">Removed</StatusPill></span> : a.hidden ? <StatusPill tone="neutral">Off</StatusPill> : <StatusPill tone="good">On</StatusPill>) },
+    {
+      id: "act", header: "Actions", srOnlyHeader: true,
+      cell: (a) => a.status === "active" && (
+        <span className="flex items-center justify-end gap-2">
+          <Switch
+            checked={!a.hidden}
+            aria-label={`${badgeOf(a.badgeId)?.name ?? "Badge"} on ${nameOf(a.businessId)} shown`}
+            onCheckedChange={async (v) => {
+              if (!user) return;
+              try { await badgeService.setAssignmentVisible(a.id, v, user); toast.success(v ? "Badge turned on" : "Badge turned off — hidden publicly"); } catch (e) { toast.error("Couldn't update", { description: e instanceof Error ? e.message : undefined }); }
+            }}
+          />
+          <Button variant="ghost" size="sm" onClick={() => setRevoking(a)}><ShieldOff /> Remove</Button>
+        </span>
+      ),
+    },
   ];
 
   return (
@@ -213,7 +240,7 @@ function BadgeTypes({ canEdit }: { canEdit: boolean }) {
 
   return (
     <>
-      {!canEdit && <p className="mb-3 text-sm text-muted-foreground">Only administrators can create or edit badge types.</p>}
+      {!canEdit && <p className="mb-3 text-sm text-muted-foreground">Creating and editing badge types needs the “Create &amp; edit badge types” permission — an administrator can grant it in Staff Management.</p>}
       <DataTable
         rows={badges}
         columns={columns}
@@ -241,13 +268,13 @@ function BadgeTypes({ canEdit }: { canEdit: boolean }) {
 function BadgeFormSheet({ open, onOpenChange, badge }: { open: boolean; onOpenChange: (o: boolean) => void; badge: BusinessBadge | null }) {
   const user = useSession();
   const editing = !!badge;
-  const blank: BadgeFormValues = { name: "", description: "", criteria: "", icon: "award", tone: "olive", requiresDocuments: false, active: true };
+  const blank: BadgeFormValues = { name: "", description: "", criteria: "", icon: "award", tone: "olive", requiresDocuments: false, active: true, autoForPaidPlans: false };
   const {
     register, control, handleSubmit, reset, setValue,
     formState: { errors, isSubmitting },
   } = useForm<BadgeFormValues>({ resolver: zodResolver(badgeSchema), defaultValues: blank });
   useEffect(() => {
-    if (open) reset(badge ? { name: badge.name, description: badge.description, criteria: badge.criteria, icon: badge.icon, tone: badge.tone, requiresDocuments: badge.requiresDocuments, active: badge.active } : blank);
+    if (open) reset(badge ? { name: badge.name, description: badge.description, criteria: badge.criteria, icon: badge.icon, tone: badge.tone, requiresDocuments: badge.requiresDocuments, active: badge.active, autoForPaidPlans: !!badge.autoForPaidPlans } : blank);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, badge, reset]);
   const w = useWatch({ control }) as BadgeFormValues;
@@ -278,7 +305,8 @@ function BadgeFormSheet({ open, onOpenChange, badge }: { open: boolean; onOpenCh
             <FormField label="Colour" htmlFor="bf-tone"><NativeSelect id="bf-tone" {...register("tone")}>{BADGE_TONE_KEYS.map((k) => <option key={k} value={k} className="capitalize">{k}</option>)}</NativeSelect></FormField>
           </div>
           <label className="flex items-center justify-between gap-3 rounded-md border bg-white p-3 text-sm"><span><span className="block font-medium">Requires documents</span><span className="text-xs text-muted-foreground">Owners must attach proof when requesting.</span></span><Switch checked={w.requiresDocuments} onCheckedChange={(v) => setValue("requiresDocuments", v)} /></label>
-          <label className="flex items-center justify-between gap-3 rounded-md border bg-white p-3 text-sm"><span><span className="block font-medium">Active</span><span className="text-xs text-muted-foreground">Inactive badges are hidden and can&apos;t be requested.</span></span><Switch checked={w.active} onCheckedChange={(v) => setValue("active", v)} /></label>
+          <label className="flex items-center justify-between gap-3 rounded-md border bg-white p-3 text-sm"><span><span className="block font-medium">Active — available for assignment</span><span className="text-xs text-muted-foreground">Inactive badges are hidden and can&apos;t be assigned or requested.</span></span><Switch checked={w.active} onCheckedChange={(v) => setValue("active", v)} /></label>
+          <label className="flex items-center justify-between gap-3 rounded-md border bg-white p-3 text-sm"><span><span className="block font-medium">Auto-award to paid business plans</span><span className="text-xs text-muted-foreground">Every business on an active paid plan shows this badge automatically. Leave off for verification badges that need review.</span></span><Switch checked={w.autoForPaidPlans} onCheckedChange={(v) => setValue("autoForPaidPlans", v)} /></label>
         </form>
         <SheetFooter className="flex-row justify-end gap-2 border-t border-sand-200 p-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

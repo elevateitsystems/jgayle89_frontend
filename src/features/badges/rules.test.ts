@@ -54,3 +54,20 @@ describe("directory filters: badges and hiring", () => {
     assert.ok(out.every((b) => b.hiring && idsFor(b.id).includes("badge_vet_owned")));
   });
 });
+
+describe("auto-awarded badges (client update §5)", () => {
+  it("gives 'Verified Business' to paid plans only, and nothing else", async () => {
+    const { autoBadgeIds, badgesFor } = await import("./rules.ts");
+    const { badges } = await import("../../lib/mock-data/badges.ts");
+    assert.deepEqual(autoBadgeIds(badges, true), ["badge_verified"]);
+    assert.deepEqual(autoBadgeIds(badges, false), []);
+    const held = badgesFor(badges, [], "biz_x", { onPaidPlan: true }).map((b) => b.id);
+    assert.deepEqual(held, ["badge_verified"], "verification badges like Vet Owned still need review");
+  });
+  it("switched-off assignments are hidden without being revoked", async () => {
+    const { activeBadgeIds } = await import("./rules.ts");
+    const a = { id: "a", businessId: "b", badgeId: "badge_vet_owned", status: "active" as const, verifiedOn: "2026-01-01", verifiedBy: "Sam" };
+    assert.deepEqual(activeBadgeIds([a], "b"), ["badge_vet_owned"]);
+    assert.deepEqual(activeBadgeIds([{ ...a, hidden: true }], "b"), []);
+  });
+});

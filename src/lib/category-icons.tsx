@@ -3,6 +3,7 @@ import {
   Camera,
   Cpu,
   Hammer,
+  Handshake,
   HeartPulse,
   Home,
   Mountain,
@@ -24,6 +25,7 @@ const map: Record<string, LucideIcon> = {
   mountain: Mountain,
   camera: Camera,
   scissors: Scissors,
+  handshake: Handshake,
 };
 
 export const categoryIconKeys = Object.keys(map);

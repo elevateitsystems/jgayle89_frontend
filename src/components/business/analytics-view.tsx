@@ -13,17 +13,20 @@ import type { Business } from "@/types";
 
 const pct = (now: number, prev: number) => (prev === 0 ? 0 : Math.round(((now - prev) / prev) * 1000) / 10);
 
-/** Analytics for one business. What's shown depends on the plan's analytics features; locked sections explain which plan unlocks them. */
-export function AnalyticsView({ business }: { business: Business }) {
+/**
+ * Analytics for one business. What's shown depends on the plan's analytics features (Business Pro & Executive —
+ * client update §7A); locked sections explain which plan unlocks them. `fullAccess` (admins only) shows everything.
+ */
+export function AnalyticsView({ business, fullAccess = false }: { business: Business; fullAccess?: boolean }) {
   const plan = useResolvedPlan("business", business.id);
   const plans = useAllPlans();
   const data = useBusinessAnalytics(business.id, 30);
 
   if (!data) return null;
-  const basic = hasFeature(plan, "analytics_basic");
-  const trends = hasFeature(plan, "analytics_trends");
-  const insights = hasFeature(plan, "analytics_insights");
-  const exportable = hasFeature(plan, "analytics_export");
+  const basic = fullAccess || hasFeature(plan, "analytics_basic");
+  const trends = fullAccess || hasFeature(plan, "analytics_trends");
+  const insights = fullAccess || hasFeature(plan, "analytics_insights");
+  const exportable = fullAccess || hasFeature(plan, "analytics_export");
   const need = (id: string) => cheapestPlanWith(plans, "business", id)?.name;
 
   function exportCsv() {
@@ -42,7 +45,7 @@ export function AnalyticsView({ business }: { business: Business }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-muted-foreground">Last 30 days · {plan?.name} plan · Sample data for this preview — real analytics arrive with the backend.</p>
+      <p className="text-xs text-muted-foreground">Last 30 days · {plan?.name} plan{fullAccess ? " · administrator view (all sections)" : ""} · Sample data for this preview — real analytics arrive with the backend.</p>
 
       <section aria-label="Key numbers" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Profile views" value={data.totals.views.toLocaleString()} delta={trends ? pct(data.totals.views, data.previous.views) : undefined} icon={Eye} />

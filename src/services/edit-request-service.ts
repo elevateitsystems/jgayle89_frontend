@@ -21,7 +21,7 @@ export interface EditRequestInput {
   changes: BusinessChanges;
   attachments: EditAttachment[];
   /** The owner's plan limits (null = unlimited). The API must enforce these itself. */
-  caps?: { socialLinks?: number | null; promotions?: number | null };
+  caps?: { socialLinks?: number | null; promotions?: number | null; gallery?: number | null; videos?: number | null };
 }
 
 const now = () => new Date().toISOString();
@@ -50,6 +50,9 @@ function prepare(business: ReturnType<typeof ownedBusiness>, input: EditRequestI
   const { socialLinks: linkCap, promotions: promoCap } = input.caps ?? {};
   if (changes.socialLinks && linkCap != null && changes.socialLinks.length > linkCap) throw new Error(`Your plan allows up to ${linkCap} social links.`);
   if (changes.promotions && promoCap != null && changes.promotions.length > promoCap) throw new Error(`Your plan allows up to ${promoCap} active promotions.`);
+  const { gallery: galleryCap, videos: videoCap } = input.caps ?? {};
+  if (changes.gallery && galleryCap != null && changes.gallery.length > galleryCap) throw new Error(`Your plan allows up to ${galleryCap} gallery photos.`);
+  if (changes.videos && videoCap != null && changes.videos.length > videoCap) throw new Error(`Your plan allows up to ${videoCap} videos.`);
   const before: Record<string, unknown> = {};
   for (const k of keys as EditableFieldKey[]) before[k] = current[k];
   return { changes, before: before as BusinessChanges };
@@ -108,7 +111,7 @@ export const editRequestService = {
     if (decision === "approve") {
       const live = businessStore.getSnapshot().find((b) => b.id === req.businessId);
       if (!live) throw new Error("This business no longer exists.");
-      await businessService.update(req.businessId, req.changes);
+      await businessService.update(req.businessId, req.changes, reviewer);
     }
     const status = decision === "approve" ? "approved" : decision === "reject" ? "rejected" : "changes_requested";
     return patch(id, {

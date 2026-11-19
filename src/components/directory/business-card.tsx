@@ -4,6 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
+import { BusinessAvatar } from "@/components/shared/monogram";
+import { mediaAllowance, visibleMedia } from "@/features/business/media";
+import { useResolvedPlan } from "@/features/membership/hooks";
 import { BadgeRow } from "@/components/badges/business-badge";
 import { HiringChip } from "@/components/business/hiring-toggle";
 import { SponsoredLabel } from "@/components/sponsorship/placements";
@@ -24,6 +27,8 @@ interface Props {
 
 export function BusinessCard({ business: b, variant = "grid", active, priority, sponsored, onHover }: Props) {
   const { categoryById } = useCategories();
+  // Free business memberships show the profile/logo image only (client update §4A).
+  const cover = visibleMedia(b, mediaAllowance(useResolvedPlan("business", b.id), b)).cover;
   const category = categoryById(b.category);
   const list = variant === "list";
 
@@ -47,14 +52,22 @@ export function BusinessCard({ business: b, variant = "grid", active, priority, 
           list ? "aspect-[16/10] sm:aspect-auto sm:w-64 md:w-72" : "aspect-[4/3]",
         )}
       >
-        <Image
-          src={b.coverImage}
-          alt={`${b.name} — ${category?.name ?? "business"}`}
-          fill
-          priority={priority}
-          sizes={list ? "(min-width: 640px) 288px, 100vw" : "(min-width: 1280px) 380px, (min-width: 640px) 45vw, 100vw"}
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-        />
+        {cover ? (
+          <Image
+            src={cover}
+            alt={`${b.name} — ${category?.name ?? "business"}`}
+            fill
+            priority={priority}
+            sizes={list ? "(min-width: 640px) 288px, 100vw" : "(min-width: 1280px) 380px, (min-width: 640px) 45vw, 100vw"}
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            unoptimized={cover.startsWith("data:")}
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center bg-olive-800">
+            <span className="topo-bg absolute inset-0 opacity-20" aria-hidden />
+            <BusinessAvatar name={b.name} src={b.profileImage} className="relative size-20 rounded-lg border-4 border-white/80 shadow-md" textClassName="text-2xl" />
+          </span>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-olive-950/35 via-transparent to-transparent" />
         {category && (
           <span className="absolute left-3 top-3 rounded-sm bg-white/95 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-olive-800 shadow-sm">
@@ -90,7 +103,7 @@ export function BusinessCard({ business: b, variant = "grid", active, priority, 
           <RatingStars rating={b.rating} reviewCount={b.reviewCount} />
           <span className="inline-flex items-center gap-1 text-xs font-medium text-olive-700">
             <BadgeCheck className="size-3.5" aria-hidden />
-            {b.branch}
+            {b.listingKind === "veteran_friendly" ? "Veteran-friendly" : b.branch}
           </span>
         </div>
       </div>

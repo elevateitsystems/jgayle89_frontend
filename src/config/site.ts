@@ -1,6 +1,6 @@
 const features = {
-  /** Veteran benefits directory — a later-phase feature, not part of Phase 1. */
-  benefits: false as boolean,
+  /** Public Benefits Directory — switched on by the client's 2026-11 update (public, no account needed). */
+  benefits: true as boolean,
 };
 
 export const siteConfig = {
@@ -31,10 +31,11 @@ export const siteConfig = {
   features,
   nav: [
     { label: "Directory", href: "/directory" },
+    ...(features.benefits ? [{ label: "Benefits", href: "/benefits" }] : []),
+    { label: "Freebies & Discounts", href: "/freebies" },
     { label: "Events", href: "/events" },
     { label: "Resources", href: "/resources" },
     { label: "Pricing", href: "/pricing" },
-    ...(features.benefits ? [{ label: "Veteran Benefits", href: "/benefits" }] : []),
     { label: "About", href: "/#mission" },
   ],
 } as const;

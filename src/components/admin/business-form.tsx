@@ -8,6 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, MapPin, Save } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUpload } from "./image-upload";
+import { CategoryAssignment, MediaEditor, SocialLinksEditor, extrasFrom, socialLinksError, type ListingExtras } from "./listing-extras-editor";
+import { mediaAllowance } from "@/features/business/media";
+import { useResolvedPlan } from "@/features/membership/hooks";
 import { PageHeader } from "./page-header";
 import Image from "next/image";
 import { BusinessCard } from "@/components/directory/business-card";
@@ -54,9 +57,14 @@ function toFormValues(b?: Business, canUploadPhotos = true): BusinessFormValues 
 
 export function BusinessForm({ business }: { business?: Business }) {
   const router = useRouter();
-  const { categories } = useCategories();
-  const canUploadPhotos = hasPermission(useSession(), "photos.upload");
+  const { categories, allPrimaries } = useCategories();
+  const viewer = useSession();
+  const canUploadPhotos = hasPermission(viewer, "photos.upload");
   const editing = !!business;
+  // Fields added by the client's 2026-11 update, edited outside the main schema and merged on save.
+  const [extras, setExtras] = useState<ListingExtras>(() => extrasFrom(business));
+  const plan = useResolvedPlan("business", business?.id);
+  const allowance = mediaAllowance(plan, business ?? {});
   const [slugTouched, setSlugTouched] = useState(editing);
 
   const {
@@ -109,8 +117,15 @@ export function BusinessForm({ business }: { business?: Business }) {
   const markers = hasCoords ? [{ id: "pick", lat: Number(v.lat), lng: Number(v.lng), title: v.name || "Selected location" }] : [];
 
   async function onSubmit(values: BusinessFormOutput) {
+    const linkError = socialLinksError(extras.socialLinks);
+    if (linkError) {
+      toast.error("Check the social media links", { description: linkError });
+      return;
+    }
     const input: BusinessInput = {
       ...values,
+      ...extras,
+      secondaryCategories: extras.secondaryCategories.filter((c) => c !== values.category),
       category: values.category,
       services: csv(values.services),
       keywords: csv(values.keywords),
@@ -119,10 +134,10 @@ export function BusinessForm({ business }: { business?: Business }) {
     };
     try {
       if (editing && business) {
-        await businessService.update(business.id, input);
+        await businessService.update(business.id, input, viewer ?? undefined);
         toast.success("Business updated", { description: `${values.name} was saved.` });
       } else {
-        await businessService.create(input);
+        await businessService.create(input, viewer ?? undefined);
         toast.success("Business created", { description: `${values.name} was added to the directory.` });
       }
       router.push("/admin/businesses");
@@ -175,8 +190,8 @@ export function BusinessForm({ business }: { business?: Business }) {
               <FormField label="Category" htmlFor="category" error={err("category")} required>
                 <NativeSelect id="category" {...aria("category")} {...register("category")}>
                   <option value="">Select a category…</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                  {(editing ? allPrimaries : categories).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}{c.active === false ? " (inactive)" : ""}</option>
                   ))}
                 </NativeSelect>
               </FormField>
@@ -281,6 +296,18 @@ export function BusinessForm({ business }: { business?: Business }) {
             </div>
           </Section>
 
+          <Section title="Categories & subcategories" description="The primary category above, plus any other categories and subcategories this business should appear under.">
+            <CategoryAssignment primary={v.category ?? ""} value={extras} onChange={setExtras} />
+          </Section>
+
+          <Section title="Social media links" description="Shown as clickable icons on the public profile.">
+            <SocialLinksEditor links={extras.socialLinks} onChange={(socialLinks) => setExtras({ ...extras, socialLinks })} />
+          </Section>
+
+          <Section title="Gallery & videos" description="Additional pictures and videos for the public profile.">
+            <MediaEditor value={extras} onChange={setExtras} allowance={allowance} canUpload={canUploadPhotos} />
+          </Section>
+
           <Section
             title="Images"
             description={canUploadPhotos ? "Upload files (resized in your browser) or pick a sample image." : "Photo uploads need the “Upload business photos” permission."}
@@ -291,14 +318,14 @@ export function BusinessForm({ business }: { business?: Business }) {
                   control={control}
                   name="coverImage"
                   render={({ field }) => (
-                    <ImageUpload id="coverImage" label="Cover image *" value={field.value} onChange={field.onChange} error={err("coverImage")} hint="Recommended 1600×900" />
+                    <ImageUpload id="coverImage" label="Cover / banner image *" value={field.value} onChange={field.onChange} error={err("coverImage")} hint={allowance.cover ? "Recommended 1600×900" : "Saved, but not shown publicly on this business's plan (Free = profile/logo image only)."} />
                   )}
                 />
                 <Controller
                   control={control}
                   name="profileImage"
                   render={({ field }) => (
-                    <ImageUpload id="profileImage" label="Profile image" aspect="square" value={field.value} onChange={field.onChange} hint="Optional — monogram if empty" />
+                    <ImageUpload id="profileImage" label="Profile / logo image" aspect="square" value={field.value} onChange={field.onChange} hint="Optional — monogram if empty" />
                   )}
                 />
               </div>

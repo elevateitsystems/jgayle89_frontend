@@ -3,7 +3,9 @@ import type { Business, CommunityEvent } from "@/types";
 export interface BusinessFilters {
   q: string;
   location: string;
-  category: string; // "" = all
+  category: string; // "" = all — matches the primary OR any secondary category
+  /** Subcategory id, "" = all (client update §11A). */
+  subcategory: string;
   branch: string; // "" = all
   minRating: number; // 0 = any
   /** Badge ids the business must ALL hold (each added badge narrows the results). */
@@ -17,6 +19,7 @@ export const defaultFilters: BusinessFilters = {
   q: "",
   location: "",
   category: "",
+  subcategory: "",
   branch: "",
   minRating: 0,
   badges: [],
@@ -37,7 +40,8 @@ export function filterBusinesses(
   const q = norm(f.q);
   const loc = norm(f.location);
   const out = list.filter((b) => {
-    if (f.category && b.category !== f.category) return false;
+    if (f.category && b.category !== f.category && !(b.secondaryCategories ?? []).includes(f.category)) return false;
+    if (f.subcategory && !(b.subcategories ?? []).includes(f.subcategory)) return false;
     if (f.branch && b.branch !== f.branch) return false;
     if (f.minRating && b.rating < f.minRating) return false;
     if (f.hiring && !b.hiring) return false;
@@ -51,7 +55,10 @@ export function filterBusinesses(
     }
     if (q) {
       const hay = norm(
-        [b.name, b.tagline, b.description, b.services.join(" "), b.keywords.join(" "), categoryName(b.category)].join(" "),
+        [
+          b.name, b.tagline, b.description, b.services.join(" "), b.keywords.join(" "),
+          ...[b.category, ...(b.secondaryCategories ?? []), ...(b.subcategories ?? [])].map(categoryName),
+        ].join(" "),
       );
       if (!q.split(/\s+/).every((t) => hay.includes(t))) return false;
     }
@@ -76,7 +83,7 @@ export function filterBusinesses(
 }
 
 export function activeFilterCount(f: BusinessFilters) {
-  return [f.q, f.location, f.category, f.branch, f.minRating ? "r" : "", f.hiring ? "h" : "", ...f.badges].filter(Boolean).length;
+  return [f.q, f.location, f.category, f.subcategory, f.branch, f.minRating ? "r" : "", f.hiring ? "h" : "", ...f.badges].filter(Boolean).length;
 }
 
 export function filterEvents(

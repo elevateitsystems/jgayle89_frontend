@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminBusinessLink, AdminMemberLink } from "@/components/admin/entity-links";
 import { useMemo, useState } from "react";
 import { Download, Info } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
@@ -43,7 +44,7 @@ export function PaymentsAdmin() {
 
   const columns: Column<Invoice>[] = [
     { id: "date", header: "Date", sort: (i) => i.date, cell: (i) => <span className="whitespace-nowrap">{formatDate(i.date)}</span> },
-    { id: "desc", header: "Description", cell: (i) => <span className="block max-w-[18rem]"><span className="block truncate font-medium text-olive-950">{i.description}</span><span className="block truncate text-xs text-muted-foreground">{payer(i)}{bizName(i) ? ` · ${bizName(i)}` : ""}</span></span> },
+    { id: "desc", header: "Description", cell: (i) => <span className="block max-w-[18rem]"><span className="block truncate font-medium text-olive-950">{i.description}</span><span className="block truncate text-xs text-muted-foreground"><AdminMemberLink userId={i.userId} name={payer(i)} className="font-medium" />{i.businessId ? <> · <AdminBusinessLink businessId={i.businessId} name={bizName(i)} className="font-medium" /></> : ""}</span></span> },
     { id: "kind", header: "Type", hideBelow: "md", sort: (i) => i.kind, cell: (i) => <span className="capitalize">{i.kind}</span> },
     { id: "amount", header: "Amount", sort: (i) => i.amount, cell: (i) => <span className="tabular-nums">{formatPrice(i.amount)}</span> },
     { id: "status", header: "Status", sort: (i) => i.status, cell: (i) => <InvoiceStatusPill status={i.status} /> },

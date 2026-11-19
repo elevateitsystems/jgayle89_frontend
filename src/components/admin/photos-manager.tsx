@@ -1,10 +1,14 @@
 "use client";
 
+import { AdminBusinessLink } from "@/components/admin/entity-links";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ImagePlus, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUpload } from "./image-upload";
+import { MediaEditor, extrasFrom } from "./listing-extras-editor";
+import { mediaAllowance } from "@/features/business/media";
+import { useResolvedPlan } from "@/features/membership/hooks";
 import { PageHeader } from "./page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { BusinessAvatar } from "@/components/shared/monogram";
@@ -12,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBusinesses } from "@/hooks/use-businesses";
+import { useSession } from "@/hooks/use-session";
 import { useCategories } from "@/hooks/use-categories";
 import { businessService } from "@/services/business-service";
 import type { Business } from "@/types";
@@ -60,7 +65,7 @@ export function PhotosManager() {
               <div className="flex items-center gap-3 p-4">
                 <BusinessAvatar name={b.name} src={b.profileImage} className="size-11 shrink-0 rounded-md" textClassName="text-sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-olive-950">{b.name}</p>
+                  <p className="truncate"><AdminBusinessLink businessId={b.id} name={b.name} /></p>
                   <p className="truncate text-xs text-muted-foreground">{categoryName(b.category)} · {b.city}, {b.state}</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setSelected(b)} aria-label={`Change photos for ${b.name}`}>
@@ -80,7 +85,7 @@ export function PhotosManager() {
 function PhotosSheet({ business, onClose }: { business: Business | null; onClose: () => void }) {
   return (
     <Sheet open={!!business} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full gap-0 bg-sand-50 p-0 sm:max-w-md">
+      <SheetContent side="right" className="w-full gap-0 bg-sand-50 p-0 sm:max-w-lg">
         {/* Keyed so the form state resets for each business without an effect. */}
         {business && <PhotosForm key={business.id} business={business} onClose={onClose} />}
       </SheetContent>
@@ -89,8 +94,11 @@ function PhotosSheet({ business, onClose }: { business: Business | null; onClose
 }
 
 function PhotosForm({ business, onClose }: { business: Business; onClose: () => void }) {
+  const viewer = useSession();
   const [cover, setCover] = useState(business.coverImage);
   const [profile, setProfile] = useState(business.profileImage ?? "");
+  const [extras, setExtras] = useState(() => extrasFrom(business));
+  const allowance = mediaAllowance(useResolvedPlan("business", business.id), business);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -100,7 +108,7 @@ function PhotosForm({ business, onClose }: { business: Business; onClose: () => 
     }
     setSaving(true);
     try {
-      await businessService.update(business.id, { coverImage: cover, profileImage: profile || undefined });
+      await businessService.update(business.id, { coverImage: cover, profileImage: profile || undefined, gallery: extras.gallery, videos: extras.videos }, viewer ?? undefined);
       toast.success("Photos updated", { description: business.name });
       onClose();
     } catch (e) {
@@ -114,11 +122,12 @@ function PhotosForm({ business, onClose }: { business: Business; onClose: () => 
     <>
       <SheetHeader className="border-b border-sand-200 p-5">
         <SheetTitle>{business.name}</SheetTitle>
-        <SheetDescription>Replace the cover and profile photo.</SheetDescription>
+        <SheetDescription>Profile/logo, cover, gallery and videos — within the limits of this business&apos;s plan.</SheetDescription>
       </SheetHeader>
       <div className="flex-1 space-y-6 overflow-y-auto p-5">
-        <ImageUpload id="photo-cover" label="Cover image *" value={cover} onChange={setCover} hint="Recommended 1600×900" />
-        <ImageUpload id="photo-profile" label="Profile image" aspect="square" value={profile} onChange={setProfile} hint="Optional — monogram if empty" />
+        <ImageUpload id="photo-profile" label="Profile / logo image" aspect="square" value={profile} onChange={setProfile} hint="Included on every plan — monogram if empty" />
+        <ImageUpload id="photo-cover" label="Cover / banner image *" value={cover} onChange={setCover} hint={allowance.cover ? "Recommended 1600×900" : "Saved, but not shown publicly on a Free plan."} />
+        <MediaEditor value={extras} onChange={setExtras} allowance={allowance} canUpload />
       </div>
       <SheetFooter className="flex-row justify-end gap-2 border-t border-sand-200 p-4">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

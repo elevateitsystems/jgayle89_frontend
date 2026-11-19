@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { benefitCategories } from "@/data/benefit-categories";
+import { benefitAudiences, benefitCategories } from "@/data/benefit-categories";
 import { US_STATES } from "@/data/us-states";
 import { defaultBenefitFilters, type BenefitFilters } from "@/lib/benefit-filters";
 
@@ -17,10 +17,14 @@ export function useBenefitFilters() {
   const [filters, setFilters] = useState<BenefitFilters>(() => {
     const state = (params.get("state") ?? "").toUpperCase();
     const category = params.get("category") ?? "";
+    const audience = params.get("background") ?? "";
+    const scope = params.get("scope") ?? "";
     return {
       q: params.get("q") ?? "",
       state: US_STATES.some((s) => s.code === state) ? state : "",
       category: benefitCategories.some((c) => c.id === category) ? category : "",
+      audience: benefitAudiences.some((a) => a.id === audience) ? audience : "",
+      scope: scope === "federal" || scope === "state" ? scope : "",
     };
   });
   const [page, setPage] = useState(() => Math.max(1, Number(params.get("page") ?? 1) || 1));
@@ -40,6 +44,8 @@ export function useBenefitFilters() {
     if (filters.q) sp.set("q", filters.q);
     if (filters.state) sp.set("state", filters.state);
     if (filters.category) sp.set("category", filters.category);
+    if (filters.audience) sp.set("background", filters.audience);
+    if (filters.scope) sp.set("scope", filters.scope);
     if (page > 1) sp.set("page", String(page));
     const qs = sp.toString();
     window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);

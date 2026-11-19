@@ -5,6 +5,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { useCategories } from "@/hooks/use-categories";
 import { useSession } from "@/hooks/use-session";
+import { useRegistrationOpen } from "@/hooks/use-settings";
 import { isBackOffice } from "@/lib/permissions";
 import { siteConfig } from "@/config/site";
 
@@ -12,6 +13,8 @@ const explore = [
   { label: "Business directory", href: "/directory" },
   { label: "Upcoming events", href: "/events" },
   { label: "About the mission", href: "/#mission" },
+  { label: "Benefits Directory", href: "/benefits" },
+  { label: "Freebies & Discounts", href: "/freebies" },
   { label: "Join the community", href: "/register" },
 ];
 
@@ -23,9 +26,11 @@ const guestAccount = [
 export function SiteFooter() {
   const { categories } = useCategories();
   const session = useSession();
+  const registrationOpen = useRegistrationOpen();
+  const exploreLinks = registrationOpen ? explore : explore.filter((l) => l.href !== "/register");
   const account = session
     ? [{ label: "My profile", href: "/account" }, ...(isBackOffice(session) ? [{ label: "Dashboard", href: "/admin" }] : [])]
-    : guestAccount;
+    : guestAccount.filter((l) => registrationOpen || l.href !== "/register");
   return (
     <footer className="relative mt-auto overflow-hidden bg-olive-950 text-olive-100">
       <div className="topo-bg pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden />
@@ -59,7 +64,7 @@ export function SiteFooter() {
           <nav aria-label="Explore" className="lg:col-span-2 lg:col-start-6">
             <h3 className="font-sans text-xs font-semibold uppercase tracking-[0.16em] text-olive-300">Explore</h3>
             <ul className="mt-4 space-y-2.5 text-sm">
-              {explore.map((l) => (
+              {exploreLinks.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="hover:text-white hover:underline">
                     {l.label}

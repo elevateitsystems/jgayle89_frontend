@@ -7,6 +7,8 @@ import {
   House,
   ReceiptText,
   Wallet,
+  Users2,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 import { benefitCategoryName } from "@/data/benefit-categories";
@@ -22,6 +24,8 @@ export const benefitCategoryIcon: Record<BenefitCategory, LucideIcon> = {
   disability: Accessibility,
   tax: ReceiptText,
   financial: Wallet,
+  family: Users2,
+  other: CircleHelp,
 };
 
 export function CategoryBadge({ category }: { category: BenefitCategory }) {

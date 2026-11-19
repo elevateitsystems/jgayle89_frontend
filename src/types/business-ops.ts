@@ -1,7 +1,7 @@
 /** Business-owner tooling: social links, promotions, the edit-request workflow and analytics. */
 import type { Business } from "./index";
 
-export type SocialPlatform = "facebook" | "instagram" | "linkedin" | "youtube" | "website";
+export type SocialPlatform = "facebook" | "instagram" | "linkedin" | "tiktok" | "youtube" | "x" | "website";
 
 export interface SocialLink {
   platform: SocialPlatform;
@@ -39,6 +39,14 @@ export interface EditableBusinessFields {
   zip: string;
   socialLinks: SocialLink[];
   promotions: Promotion[];
+  /** Category choices — owners pick from existing ones; staff approve (client update §11D). */
+  secondaryCategories: string[];
+  subcategories: string[];
+  /** Photos & videos (client update §4A), limited by the business plan. */
+  coverImage: string;
+  profileImage: string;
+  gallery: string[];
+  videos: { id: string; url: string; title: string }[];
 }
 
 export type EditableFieldKey = keyof EditableBusinessFields;
