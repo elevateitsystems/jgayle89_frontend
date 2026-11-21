@@ -12,6 +12,7 @@ export * from "./offers";
 export * from "./services";
 export * from "./places";
 export * from "./audit";
+export * from "./content-categories";
 
 export type ListingStatus = "active" | "pending" | "draft";
 export type EventStatus = "published" | "draft";
@@ -67,6 +68,8 @@ export interface Business {
   coverImage: string;
   profileImage?: string; // optional; a monogram is used when empty
   featured: boolean;
+  /** Admin-managed ordering for the public featured section. Lower values appear first. */
+  featuredOrder?: number;
   status: ListingStatus;
   createdAt: string; // ISO date
   /** Reserved for the future Google Places integration; unused by the mock provider. */
@@ -150,6 +153,10 @@ export interface CommunityEvent {
   price: string; // "Free" or "$15"
   capacity: number;
   registered: number;
+  /** External links only; Mission: SITREP does not process event registration. */
+  websiteUrl?: string;
+  socialUrl?: string;
+  registrationUrl?: string;
   status: EventStatus;
   createdAt: string;
 }
@@ -265,6 +272,7 @@ export interface Benefit {
   slug: string;
   title: string;
   category: BenefitCategory;
+  subcategoryId?: string;
   scope: BenefitScope;
   state: string | null;
   agency: string;
@@ -275,6 +283,8 @@ export interface Benefit {
   sourceUrl: string; // official program page
   applyUrl?: string; // official application page, when distinct
   tags: string[];
+  /** Data URL in the demo; persistent media storage will be added with the backend. */
+  image?: string;
   /** Military background the program is mainly aimed at (the directory's "military background" filter). */
   audiences?: BenefitAudience[];
   /** Optional end date for time-limited programs; expired entries are hidden publicly. */

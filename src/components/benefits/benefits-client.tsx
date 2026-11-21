@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { ChevronLeft, ChevronRight, Info, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleHelp, Info, Search, X } from "lucide-react";
 import { BenefitCard, BenefitCardSkeleton } from "./benefit-card";
 import { benefitCategoryIcon } from "./benefit-badges";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { benefitAudiences, benefitCategories } from "@/data/benefit-categories";
+import { benefitAudiences } from "@/data/benefit-categories";
 import { usePublicBenefits } from "@/features/benefits/hooks";
 import { buildBenefitIndex } from "@/lib/benefit-filters";
 import { US_STATES, stateName } from "@/data/us-states";
 import { useBenefitFilters } from "@/hooks/use-benefit-filters";
+import { useContentCategories } from "@/hooks/use-content-categories";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useSimulatedLoading } from "@/hooks/use-store";
 import { searchBenefitIndex } from "@/services/benefit-service";
@@ -28,6 +29,7 @@ export function BenefitsClient() {
   const debouncedQ = useDebouncedValue(filters.q, 150);
   // Reads the live, staff-managed catalogue (Admin → Benefits Management): published and not expired.
   const catalogue = usePublicBenefits();
+  const categories = useContentCategories("benefit");
   const index = useMemo(() => buildBenefitIndex(catalogue, stateName), [catalogue]);
   const statesWithPrograms = useMemo(() => new Set(catalogue.flatMap((b) => (b.state ? [b.state] : []))), [catalogue]);
   const result = useMemo(
@@ -104,8 +106,8 @@ export function BenefitsClient() {
       <div ref={topRef} className="container-page scroll-mt-24 py-8 sm:py-10">
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by category">
           <CategoryPill label="All categories" count={totalForCounts} active={!filters.category} onClick={() => update({ category: "" })} />
-          {benefitCategories.map((c) => {
-            const Icon = benefitCategoryIcon[c.id];
+          {categories.map((c) => {
+            const Icon = benefitCategoryIcon[c.id as keyof typeof benefitCategoryIcon] ?? CircleHelp;
             return (
               <CategoryPill
                 key={c.id}

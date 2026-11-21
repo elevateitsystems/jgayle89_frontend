@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Check, Loader2, Pencil, Plus, X } from "lucide-react";
+import { Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AuditLogPanel } from "./audit-log";
 import { ImageUpload } from "./image-upload";
@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/features/membership/access";
+import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { useAllPlans } from "@/features/membership/hooks";
 import { PROMOTION_KIND_LABEL, describePromotion } from "@/features/services/pricing";
 import { useSession } from "@/hooks/use-session";
@@ -29,6 +30,10 @@ import { formatDate, todayISO } from "@/lib/date";
 import { hasPermission } from "@/lib/permissions";
 import { AUDIENCE_LABEL } from "@/lib/mock-data/membership";
 import { marketplaceService, promotionStore, serviceStore } from "@/services/marketplace-service";
+import { userStore } from "@/services/user-service";
+import { useBadges } from "@/features/badges/hooks";
+import { useCategories } from "@/hooks/use-categories";
+import { US_STATES } from "@/data/us-states";
 import type { PromotionKind, ServiceAudience, ServiceAvailability, ServiceListing, ServicePromotion } from "@/types";
 
 
@@ -60,6 +65,7 @@ function ServicesTable() {
   const plans = useAllPlans();
   const [audience, setAudience] = useState("");
   const [editing, setEditing] = useState<ServiceListing | "new" | null>(null);
+  const [toDelete, setToDelete] = useState<ServiceListing | null>(null);
   const rows = useMemo(() => services.filter((s) => !audience || s.audience === audience), [services, audience]);
 
   async function setAvailability(s: ServiceListing, availability: ServiceAvailability) {
@@ -87,7 +93,7 @@ function ServicesTable() {
         </NativeSelect>
       ),
     },
-    { id: "edit", header: "Edit", srOnlyHeader: true, cell: (s) => <Button variant="ghost" size="icon-sm" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil /></Button> },
+    { id: "edit", header: "Actions", srOnlyHeader: true, cell: (s) => <span className="flex justify-end gap-1"><Button variant="ghost" size="icon-sm" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil /></Button><Button variant="ghost" size="icon-sm" aria-label={`Delete ${s.name}`} onClick={() => setToDelete(s)}><Trash2 /></Button></span> },
   ];
 
   return (
@@ -111,6 +117,7 @@ function ServicesTable() {
         empty={{ title: "No services yet", description: "Create the first service." }}
       />
       <ServiceSheet target={editing} onClose={() => setEditing(null)} />
+      <ConfirmDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)} destructive title="Delete this service?" description={`“${toDelete?.name ?? ""}” will be removed from the marketplace in this demo.`} confirmLabel="Delete service" busyLabel="Deleting…" successMessage="Service deleted" onConfirm={async () => { if (toDelete && user) await marketplaceService.removeService(toDelete.id, user); }} />
     </>
   );
 }
@@ -269,6 +276,10 @@ const promoSchema = z
     couponCode: z.string().trim().max(24).regex(/^[A-Za-z0-9-]*$/, "Letters, numbers and dashes only"),
     planIds: z.array(z.string()),
     serviceIds: z.array(z.string()),
+    memberIds: z.array(z.string()),
+    badgeIds: z.array(z.string()),
+    categoryIds: z.array(z.string()),
+    states: z.array(z.string()),
     startsOn: z.string().min(1, "Choose a start date"),
     endsOn: z.string(),
   })
@@ -280,11 +291,14 @@ function PromotionSheet({ open, onOpenChange, direct }: { open: boolean; onOpenC
   const user = useSession();
   const services = useStore(serviceStore);
   const plans = useAllPlans();
-  const blank: PromoValues = { name: "", kind: "percent_off", value: 10, couponCode: "", planIds: [], serviceIds: [], startsOn: todayISO(), endsOn: "" };
+  const blank: PromoValues = { name: "", kind: "percent_off", value: 10, couponCode: "", planIds: [], serviceIds: [], memberIds: [], badgeIds: [], categoryIds: [], states: [], startsOn: todayISO(), endsOn: "" };
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PromoValues>({ resolver: zodResolver(promoSchema), defaultValues: blank });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (open) reset(blank); }, [open, reset]);
   const kind = useWatch({ control, name: "kind" });
+  const members = useStore(userStore).filter((u) => u.role === "user" && u.status === "active");
+  const badges = useBadges().filter((b) => b.active);
+  const { categories } = useCategories();
 
   async function onSubmit(v: PromoValues) {
     if (!user) return;
@@ -297,7 +311,7 @@ function PromotionSheet({ open, onOpenChange, direct }: { open: boolean; onOpenC
     }
   }
 
-  const checkList = (name: "planIds" | "serviceIds", options: { id: string; label: string }[]) => (
+  const checkList = (name: "planIds" | "serviceIds" | "memberIds" | "badgeIds" | "categoryIds" | "states", options: { id: string; label: string }[]) => (
     <Controller
       control={control}
       name={name}
@@ -335,6 +349,10 @@ function PromotionSheet({ open, onOpenChange, direct }: { open: boolean; onOpenC
           </div>
           <div><p className="mb-1.5 text-sm font-medium text-olive-950">Membership tiers</p>{checkList("planIds", plans.map((p) => ({ id: p.id, label: `${AUDIENCE_LABEL[p.audience]} · ${p.name}` })))}</div>
           <div><p className="mb-1.5 text-sm font-medium text-olive-950">Services</p>{checkList("serviceIds", services.map((s) => ({ id: s.id, label: s.name })))}</div>
+          <div><p className="mb-1.5 text-sm font-medium text-olive-950">Specific members <span className="text-xs font-normal text-muted-foreground">(optional)</span></p>{checkList("memberIds", members.map((m) => ({ id: m.id, label: m.name })))}</div>
+          <div><p className="mb-1.5 text-sm font-medium text-olive-950">Badge types <span className="text-xs font-normal text-muted-foreground">(optional)</span></p>{checkList("badgeIds", badges.map((b) => ({ id: b.id, label: b.name })))}</div>
+          <div><p className="mb-1.5 text-sm font-medium text-olive-950">Business categories <span className="text-xs font-normal text-muted-foreground">(optional)</span></p>{checkList("categoryIds", categories.map((c) => ({ id: c.id, label: c.name })))}</div>
+          <div><p className="mb-1.5 text-sm font-medium text-olive-950">States <span className="text-xs font-normal text-muted-foreground">(optional)</span></p>{checkList("states", US_STATES.map((s) => ({ id: s.code, label: s.name })))}</div>
         </form>
         <SheetFooter className="flex-row justify-end gap-2 border-t border-sand-200 p-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

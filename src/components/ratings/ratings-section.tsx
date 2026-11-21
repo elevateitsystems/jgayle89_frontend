@@ -1,7 +1,17 @@
-import { FlaskConical, MessageSquareText } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { FlaskConical, Loader2, MessageSquareText, Star } from "lucide-react";
+import { toast } from "sonner";
 import { GoogleMark } from "./rating-pills";
 import { RatingStars } from "@/components/shared/rating-stars";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useSession } from "@/hooks/use-session";
 import { formatDate } from "@/lib/date";
+import { reviewService } from "@/services/review-service";
 import type { Business, GoogleRatingSummary, Review } from "@/types";
 
 interface Props {
@@ -16,6 +26,29 @@ interface Props {
 
 /** Two independent rating cards (website + Google) followed by the website's reviews. */
 export function RatingsSection({ business: b, reviews, google, googleLoading, googleEnabled }: Props) {
+  const user = useSession();
+  const [rating, setRating] = useState(0);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submitReview(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!user) return;
+    if (!rating || title.trim().length < 3 || body.trim().length < 10) {
+      toast.error("Complete the review", { description: "Choose a star rating, add a short title, and write at least 10 characters." });
+      return;
+    }
+    setSaving(true);
+    try {
+      await reviewService.create({ businessId: b.id, author: user.name, rating, title: title.trim(), body: body.trim() });
+      toast.success("Review submitted", { description: "Your demo review is now visible on this profile." });
+      setRating(0); setTitle(""); setBody("");
+    } catch (error) {
+      toast.error("Couldn't submit the review", { description: error instanceof Error ? error.message : undefined });
+    } finally { setSaving(false); }
+  }
+
   return (
     <section aria-labelledby="ratings-h">
       <h2 id="ratings-h" className="text-2xl font-semibold text-olive-950">Ratings &amp; reviews</h2>
@@ -90,6 +123,32 @@ export function RatingsSection({ business: b, reviews, google, googleLoading, go
           </ul>
         )}
       </div>
+
+      {user?.role === "user" ? (
+        <form onSubmit={submitReview} className="mt-8 rounded-lg border border-olive-200 bg-olive-50/60 p-5" noValidate>
+          <div>
+            <h3 className="font-semibold text-olive-950">Leave a review</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Share your experience as {user.name}. This preview saves the review to your browser only.</p>
+          </div>
+          <fieldset className="mt-4">
+            <legend className="text-sm font-medium text-olive-950">Star rating <span className="text-destructive" aria-hidden>*</span></legend>
+            <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Star rating">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button key={value} type="button" role="radio" aria-checked={rating === value} aria-label={`${value} star${value === 1 ? "" : "s"}`} onClick={() => setRating(value)} className="rounded p-1 focus-visible:ring-3 focus-visible:ring-ring/50">
+                  <Star className={value <= rating ? "size-6 fill-brass text-brass" : "size-6 text-sand-400"} />
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <FormField label="Review title" htmlFor="review-title" required><Input id="review-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What stood out?" /></FormField>
+            <FormField label="Your review" htmlFor="review-body" required hint="At least 10 characters."><Textarea id="review-body" rows={3} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Tell the community about your experience." /></FormField>
+          </div>
+          <Button type="submit" className="mt-4" disabled={saving}>{saving ? <><Loader2 className="animate-spin" /> Saving…</> : "Submit demo review"}</Button>
+        </form>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">Sign in as a member to leave a review.</p>
+      )}
     </section>
   );
 }

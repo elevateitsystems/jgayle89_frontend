@@ -6,9 +6,10 @@ import { Gift, Info, Search } from "lucide-react";
 import { FreebieCard } from "./freebie-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FREEBIE_CATEGORIES, FREEBIE_CATEGORY_LABEL, filterFreebies } from "@/features/offers/rules";
+import { FREEBIE_CATEGORY_LABEL, filterFreebies } from "@/features/offers/rules";
 import { useFreebies } from "@/features/offers/hooks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useContentCategories } from "@/hooks/use-content-categories";
 import { useSimulatedLoading } from "@/hooks/use-store";
 import { todayISO } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -18,10 +19,11 @@ export function FreebiesClient() {
   const params = useSearchParams();
   const loading = useSimulatedLoading();
   const all = useFreebies();
+  const categories = useContentCategories("freebie");
   const [q, setQ] = useState(params.get("q") ?? "");
   const [category, setCategory] = useState(() => {
     const c = params.get("category") ?? "";
-    return (FREEBIE_CATEGORIES as string[]).includes(c) ? c : "";
+    return c;
   });
   const debouncedQ = useDebouncedValue(q, 150);
   const today = todayISO();
@@ -54,7 +56,7 @@ export function FreebiesClient() {
 
       <div className="container-page py-8 sm:py-12">
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by category">
-          {["", ...FREEBIE_CATEGORIES].map((c) => (
+          {["", ...categories.map((x) => x.id)].map((c) => (
             <button
               key={c || "all"}
               type="button"
@@ -65,7 +67,7 @@ export function FreebiesClient() {
                 category === c ? "border-olive-700 bg-olive-700 text-white" : "border-input bg-white hover:bg-sand-100",
               )}
             >
-              {c ? FREEBIE_CATEGORY_LABEL[c as keyof typeof FREEBIE_CATEGORY_LABEL] : "All offers"}
+              {c ? categories.find((x) => x.id === c)?.name ?? FREEBIE_CATEGORY_LABEL[c as keyof typeof FREEBIE_CATEGORY_LABEL] ?? c : "All offers"}
               <span className={cn("text-xs tabular-nums", category === c ? "text-olive-100" : "text-muted-foreground")}>{c ? counts[c] ?? 0 : live.length}</span>
             </button>
           ))}

@@ -6,6 +6,7 @@ import { FreebiesSection } from "@/components/home/freebies-section";
 import { Hero } from "@/components/home/hero";
 import { MapSection } from "@/components/home/map-section";
 import { MissionSection } from "@/components/home/mission-section";
+import { PromotionsSection } from "@/components/home/promotions-section";
 
 export default function HomePage() {
   return (
@@ -14,6 +15,7 @@ export default function HomePage() {
       <FeaturedBusinesses />
       <CategoriesGrid />
       <FreebiesSection />
+      <PromotionsSection />
       <MapSection />
       <EventsSection />
       <MissionSection />

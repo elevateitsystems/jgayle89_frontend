@@ -3,16 +3,15 @@
 import { EventSponsor } from "@/components/sponsorship/placements";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, Clock, Link2, MapPin, Ticket, User, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, ExternalLink, Link2, MapPin, Ticket, User } from "lucide-react";
 import { EventCard } from "./event-card";
 import { DateBadge } from "./event-card";
 import { DemoNotice } from "@/components/shared/demo-notice";
 import { EmptyState } from "@/components/shared/empty-state";
 import { MapView } from "@/components/shared/map-view";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEvent, usePublishedEvents } from "@/hooks/use-events";
 import { formatLongDate, formatTime, isUpcoming } from "@/lib/date";
@@ -21,7 +20,6 @@ import { cn } from "@/lib/utils";
 export function EventDetail({ slug }: { slug: string }) {
   const { event: e, loading } = useEvent({ slug });
   const { events } = usePublishedEvents();
-  const [registered, setRegistered] = useState(false);
 
   const others = useMemo(
     () => events.filter((x) => x.id !== e?.id && isUpcoming(x.date)).slice(0, 3),
@@ -50,14 +48,7 @@ export function EventDetail({ slug }: { slug: string }) {
     );
   }
 
-  const spotsLeft = Math.max(0, e.capacity - e.registered - (registered ? 1 : 0));
-  const pct = Math.min(100, Math.round(((e.registered + (registered ? 1 : 0)) / e.capacity) * 100));
   const virtual = e.venue.startsWith("Online");
-
-  function register() {
-    setRegistered(true);
-    toast.success("You're on the list! (demo)", { description: `We'd send confirmation for "${e!.title}" to your email.` });
-  }
 
   async function copyLink() {
     try {
@@ -147,16 +138,19 @@ export function EventDetail({ slug }: { slug: string }) {
             </ul>
 
             <div className="mt-6">
-              <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" aria-hidden /> {e.registered + (registered ? 1 : 0)} registered</span>
-                <span>{spotsLeft} spots left</span>
-              </div>
-              <Progress value={pct} />
+              <p className="text-xs text-muted-foreground">Capacity: {e.capacity.toLocaleString()} · {e.registered.toLocaleString()} currently registered</p>
             </div>
-
-            <Button size="lg" className="mt-6 w-full" disabled={registered || spotsLeft === 0} onClick={register}>
-              {registered ? "Registered ✓" : spotsLeft === 0 ? "Sold out" : "Register (demo)"}
-            </Button>
+            {e.registrationUrl ? (
+              <a href={e.registrationUrl} target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ size: "lg" }), "mt-6 w-full")}>
+                Register / RSVP externally <ExternalLink className="size-4" />
+              </a>
+            ) : (
+              <p className="mt-6 rounded-md border border-sand-300 bg-sand-100 px-3 py-2 text-sm text-muted-foreground">Registration details are not available yet. Contact the organizer for RSVP instructions.</p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              {e.websiteUrl && <a href={e.websiteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-olive-700 hover:underline">Event website <ExternalLink className="size-3.5" /></a>}
+              {e.socialUrl && <a href={e.socialUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-olive-700 hover:underline">Social media <ExternalLink className="size-3.5" /></a>}
+            </div>
             <Button variant="outline" className="mt-2 w-full" onClick={copyLink}>
               <Link2 /> Copy event link
             </Button>

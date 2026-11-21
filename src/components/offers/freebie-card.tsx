@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Building2, CheckCircle2, ExternalLink, Gift } from "lucide-react";
 import { AssistanceButton } from "@/components/membership/assistance-button";
 import { FREEBIE_CATEGORY_LABEL } from "@/features/offers/rules";
@@ -11,9 +12,10 @@ import { OfferCountdown } from "./offer-ui";
 export function FreebieCard({ freebie: f }: { freebie: Freebie }) {
   return (
     <article className="flex h-full flex-col rounded-lg border bg-card p-5 shadow-card transition-all duration-200 hover:border-olive-300 hover:shadow-lift">
+      {f.image && <div className="relative -mx-5 -mt-5 mb-4 aspect-[16/8] overflow-hidden bg-sand-200"><Image src={f.image} alt="" fill sizes="(min-width: 1024px) 360px, 100vw" className="object-cover" unoptimized={f.image.startsWith("data:")} /></div>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-sm bg-olive-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-olive-800">
-          <Gift className="size-3.5" aria-hidden /> {FREEBIE_CATEGORY_LABEL[f.category]}
+          <Gift className="size-3.5" aria-hidden /> {FREEBIE_CATEGORY_LABEL[f.category] ?? f.category}
         </span>
         {f.expiresOn && <OfferCountdown expiresOn={f.expiresOn} />}
       </div>

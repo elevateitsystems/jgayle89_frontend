@@ -19,6 +19,9 @@ export const eventSchema = z
     price: z.string().trim().min(1, "Enter a price or 'Free'"),
     capacity: z.number({ error: "Enter a capacity" }).int().min(1, "Min 1"),
     image: z.string().min(1, "Add an event image"),
+    websiteUrl: z.union([z.literal(""), z.string().url("Enter a valid https:// URL")]),
+    socialUrl: z.union([z.literal(""), z.string().url("Enter a valid https:// URL")]),
+    registrationUrl: z.union([z.literal(""), z.string().url("Enter a valid https:// URL")]),
     status: z.enum(["published", "draft"]),
   })
   .refine((v) => !v.startTime || !v.endTime || v.endTime > v.startTime, {

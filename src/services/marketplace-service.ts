@@ -47,6 +47,15 @@ export const marketplaceService = {
     auditService.record(staff, "services", action, { id, name: current.name }, patch.price !== undefined && patch.price !== current.price ? `$${current.price} → $${patch.price}` : undefined);
   },
 
+  async removeService(id: string, staff: Reviewer): Promise<void> {
+    await delay(300);
+    requirePermission(staff, "services.manage", "delete services");
+    const current = serviceStore.getSnapshot().find((s) => s.id === id);
+    if (!current) throw new Error("Service not found.");
+    serviceStore.set(serviceStore.getSnapshot().filter((s) => s.id !== id));
+    auditService.record(staff, "services", "deleted service", { id, name: current.name });
+  },
+
   // ---- Promotions
   /**
    * Admins and staff with "Apply service discounts" create promotions directly. Other service staff can only
