@@ -36,6 +36,11 @@ export interface ServicePromotion {
   planIds: string[];
   /** Service ids it applies to. Empty = every service. */
   serviceIds: string[];
+  /** Optional audience targeting used by the demo promotion manager. */
+  memberIds?: string[];
+  badgeIds?: string[];
+  categoryIds?: string[];
+  states?: string[];
   startsOn: string; // ISO date
   endsOn?: string; // ISO date
   active: boolean;

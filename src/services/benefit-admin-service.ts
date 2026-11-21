@@ -22,10 +22,12 @@ export interface BenefitOverride {
   sourceUrl?: string;
   applyUrl?: string;
   category?: BenefitCategory;
+  subcategoryId?: string;
   audiences?: BenefitAudience[];
   expiresOn?: string;
   dataStatus?: Benefit["dataStatus"];
   lastVerified?: string;
+  image?: string;
 }
 
 export const benefitOverrideStore = createCollectionStore<BenefitOverride>("benefit-overrides", []);
@@ -42,11 +44,13 @@ export interface BenefitInput {
   sourceUrl: string;
   applyUrl?: string;
   category: BenefitCategory;
+  subcategoryId?: string;
   audiences: BenefitAudience[];
   /** "" = federal / nationwide. */
   state: string;
   agency: string;
   expiresOn?: string;
+  image?: string;
 }
 
 export interface ManagedBenefit {
@@ -103,7 +107,7 @@ export const benefitAdminService = {
     void state;
     void agency;
     // An edited entry has changed since it was last checked, so it goes back to "demo / unverified".
-    upsert(id, { ...rest, applyUrl: rest.applyUrl || undefined, expiresOn: rest.expiresOn || undefined, dataStatus: "demo", lastVerified: undefined });
+    upsert(id, { ...rest, applyUrl: rest.applyUrl || undefined, expiresOn: rest.expiresOn || undefined, image: rest.image || undefined, dataStatus: "demo", lastVerified: undefined });
     auditService.record(staff, "benefits", "edited", { id, name: patch.title ?? id });
   },
 
@@ -116,6 +120,7 @@ export const benefitAdminService = {
       slug: uniqueSlug(input.title, taken),
       title: input.title.trim(),
       category: input.category,
+      subcategoryId: input.subcategoryId || undefined,
       scope: input.state ? "state" : "federal",
       state: input.state || null,
       agency: input.agency.trim(),
@@ -129,6 +134,7 @@ export const benefitAdminService = {
       audiences: input.audiences,
       expiresOn: input.expiresOn || undefined,
       dataStatus: "demo",
+      image: input.image || undefined,
     };
     customBenefitStore.set([...customBenefitStore.getSnapshot(), benefit]);
     auditService.record(staff, "benefits", "created", { id: benefit.id, name: benefit.title });

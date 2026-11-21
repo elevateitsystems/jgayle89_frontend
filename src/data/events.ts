@@ -229,6 +229,14 @@ const seeds: Seed[] = [
 
 export const events: CommunityEvent[] = seeds.map(({ inDays, status, ...rest }, i) => ({
   ...rest,
+  ...(i === 0 ? {
+    websiteUrl: "https://honorrun.example/event",
+    socialUrl: "https://social.example/honorrun",
+    registrationUrl: "https://honorrun.example/register",
+  } : i === 1 ? {
+    websiteUrl: "https://founders.example/mixer",
+    registrationUrl: "https://founders.example/rsvp",
+  } : {}),
   id: `evt_${String(i + 1).padStart(3, "0")}`,
   date: daysFromToday(inDays),
   status: status ?? "published",

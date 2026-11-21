@@ -24,6 +24,7 @@ function defaults(e?: CommunityEvent | null): EventFormValues {
       title: "", category: "" as never, summary: "", description: "", agenda: "", date: daysFromToday(14),
       startTime: "18:00", endTime: "20:00", venue: "", address: "", city: "", state: "", organizer: "SITREP Events Team",
       price: "Free", capacity: 100, image: "", status: "draft",
+      websiteUrl: "", socialUrl: "", registrationUrl: "",
     };
   }
   return { ...e, agenda: e.agenda.join("\n") } as EventFormValues;
@@ -127,6 +128,22 @@ export function EventFormSheet({ open, onOpenChange, event }: Props) {
             </FormField>
             <FormField label="End" htmlFor="ev-endTime" error={err("endTime")} required>
               <Input id="ev-endTime" type="time" {...aria("endTime")} {...register("endTime")} />
+            </FormField>
+          </div>
+
+          <div className="space-y-4 rounded-md border border-sand-200 bg-white p-4">
+            <div>
+              <p className="text-sm font-semibold text-olive-950">External event links</p>
+              <p className="mt-1 text-xs text-muted-foreground">These links leave Mission: SITREP. Registration and RSVP are handled by the event organizer.</p>
+            </div>
+            <FormField label="Event website" htmlFor="ev-websiteUrl" error={err("websiteUrl")}>
+              <Input id="ev-websiteUrl" type="url" placeholder="https://event.example" {...aria("websiteUrl")} {...register("websiteUrl")} />
+            </FormField>
+            <FormField label="Social media URL" htmlFor="ev-socialUrl" error={err("socialUrl")}>
+              <Input id="ev-socialUrl" type="url" placeholder="https://social.example/event" {...aria("socialUrl")} {...register("socialUrl")} />
+            </FormField>
+            <FormField label="External registration / RSVP URL" htmlFor="ev-registrationUrl" error={err("registrationUrl")} hint="Optional. No internal RSVP is collected.">
+              <Input id="ev-registrationUrl" type="url" placeholder="https://tickets.example/register" {...aria("registrationUrl")} {...register("registrationUrl")} />
             </FormField>
           </div>
 

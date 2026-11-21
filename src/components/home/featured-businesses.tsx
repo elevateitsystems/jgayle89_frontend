@@ -17,7 +17,7 @@ export function FeaturedBusinesses() {
   const { featured, sponsoredIds } = useMemo(() => {
     const sponsored = sponsoredLive.flatMap(({ campaign }) => businesses.filter((b) => b.id === campaign.businessId));
     const ids = new Set(sponsored.map((b) => b.id));
-    const rest = businesses.filter((b) => b.featured && !ids.has(b.id));
+    const rest = businesses.filter((b) => b.featured && !ids.has(b.id)).sort((a, b) => (a.featuredOrder ?? 9999) - (b.featuredOrder ?? 9999) || a.name.localeCompare(b.name));
     return { featured: [...sponsored, ...rest].slice(0, 6), sponsoredIds: ids };
   }, [businesses, sponsoredLive]);
 

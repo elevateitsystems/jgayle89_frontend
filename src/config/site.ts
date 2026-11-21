@@ -33,6 +33,7 @@ export const siteConfig = {
     { label: "Directory", href: "/directory" },
     ...(features.benefits ? [{ label: "Benefits", href: "/benefits" }] : []),
     { label: "Freebies & Discounts", href: "/freebies" },
+    { label: "Promotions", href: "/promotions" },
     { label: "Events", href: "/events" },
     { label: "Resources", href: "/resources" },
     { label: "Pricing", href: "/pricing" },

@@ -29,7 +29,7 @@ export const benefitCategoryIcon: Record<BenefitCategory, LucideIcon> = {
 };
 
 export function CategoryBadge({ category }: { category: BenefitCategory }) {
-  const Icon = benefitCategoryIcon[category];
+  const Icon = benefitCategoryIcon[category] ?? CircleHelp;
   return (
     <span className="inline-flex items-center gap-1.5 rounded-sm bg-olive-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-olive-800">
       <Icon className="size-3.5" aria-hidden /> {benefitCategoryName(category)}

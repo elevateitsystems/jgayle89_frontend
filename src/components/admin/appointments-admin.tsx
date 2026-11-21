@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { X } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { toast } from "sonner";
 import { AdminMemberLink } from "./entity-links";
 import { PageHeader } from "./page-header";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
 import { StatusPill, type Tone } from "@/components/dashboard/status-pill";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSession } from "@/hooks/use-session";
 import { useStore } from "@/hooks/use-store";
 import { formatDate, formatTime, todayISO } from "@/lib/date";
@@ -16,7 +18,7 @@ import { inRange } from "@/features/analytics/rules";
 import { isBackOffice } from "@/lib/permissions";
 import { appointmentAdminService, appointmentStore } from "@/services/member-service";
 import { userStore } from "@/services/user-service";
-import type { Appointment, AppointmentStatus } from "@/types";
+import type { Appointment, AppointmentStatus, AppUser } from "@/types";
 
 const STATUS: Record<AppointmentStatus, { label: string; tone: Tone }> = {
   requested: { label: "Requested", tone: "warn" },
@@ -41,6 +43,7 @@ export function AppointmentsAdmin() {
   const [topic, setTopic] = useState(params.get("topic") ?? "");
   const [assigned, setAssigned] = useState(params.get("assigned") ?? "");
   const [when, setWhen] = useState(params.get("when") ?? "");
+  const [detail, setDetail] = useState<Appointment | null>(null);
   const fromParam = params.get("from");
   const toParam = params.get("to");
   const range = useMemo(() => (fromParam && toParam ? { from: fromParam, to: toParam } : null), [fromParam, toParam]);
@@ -89,6 +92,7 @@ export function AppointmentsAdmin() {
         </NativeSelect>
       ),
     },
+    { id: "detail", header: "Details", srOnlyHeader: true, cell: (a) => <Button variant="ghost" size="sm" onClick={() => setDetail(a)}><Eye /> View</Button> },
   ];
 
   const filtered = !!(status || topic || assigned || when || range);
@@ -118,6 +122,39 @@ export function AppointmentsAdmin() {
         noMatches={{ onClear: () => { setStatus(""); setTopic(""); setAssigned(""); setWhen(""); } }}
         empty={{ title: "No appointments", description: "Requests from members appear here." }}
       />
+      <AppointmentDetail appointment={detail} users={users} onClose={() => setDetail(null)} />
     </>
   );
+}
+
+function AppointmentDetail({ appointment, users, onClose }: { appointment: Appointment | null; users: AppUser[]; onClose: () => void }) {
+  const member = appointment ? users.find((u) => u.id === appointment.userId) : undefined;
+  return (
+    <Dialog open={!!appointment} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Appointment details</DialogTitle>
+          <DialogDescription>Demo request information. Contact details are fictional sample data.</DialogDescription>
+        </DialogHeader>
+        {appointment && (
+          <dl className="grid gap-3 rounded-md border bg-white p-4 text-sm sm:grid-cols-2">
+            <Detail label="Customer">{member?.name ?? appointment.userId}</Detail>
+            <Detail label="Contact">{member?.email ?? "No email on file"}</Detail>
+            <Detail label="Requested service">{appointment.topic}</Detail>
+            <Detail label="Purpose">{appointment.context?.title ?? appointment.topic}</Detail>
+            <Detail label="Requested date">{formatDate(appointment.date)}</Detail>
+            <Detail label="Requested time">{formatTime(appointment.time)} · {MODE[appointment.mode]}</Detail>
+            <Detail label="Current status"><StatusPill tone={STATUS[appointment.status].tone}>{STATUS[appointment.status].label}</StatusPill></Detail>
+            <Detail label="Assigned to">{appointment.assignedTo ? users.find((u) => u.id === appointment.assignedTo)?.name ?? appointment.assignedTo : "Unassigned"}</Detail>
+            <Detail label="Customer notes" wide>{appointment.notes || "No notes provided."}</Detail>
+          </dl>
+        )}
+        <DialogFooter><Button variant="outline" onClick={onClose}>Close</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Detail({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  return <div className={wide ? "sm:col-span-2" : ""}><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</dt><dd className="mt-1 break-words text-foreground">{children}</dd></div>;
 }

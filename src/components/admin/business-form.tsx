@@ -24,11 +24,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useCategories } from "@/hooks/use-categories";
 import { useSession } from "@/hooks/use-session";
+import { useStore } from "@/hooks/use-store";
 import { hasPermission } from "@/lib/permissions";
 import { slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 import { businessSchema, type BusinessFormOutput, type BusinessFormValues } from "@/schemas/business";
 import { businessService, type BusinessInput } from "@/services/business-service";
+import { userStore } from "@/services/user-service";
 import type { Business } from "@/types";
 
 const branches = ["Army", "Navy", "Marine Corps", "Air Force", "Space Force", "Coast Guard", "National Guard"] as const;
@@ -59,6 +61,9 @@ export function BusinessForm({ business }: { business?: Business }) {
   const router = useRouter();
   const { categories, allPrimaries } = useCategories();
   const viewer = useSession();
+  const users = useStore(userStore);
+  const ownerCandidates = users.filter((u) => u.role === "user" && u.status === "active");
+  const [ownerId, setOwnerId] = useState(business?.ownerId ?? "");
   const canUploadPhotos = hasPermission(viewer, "photos.upload");
   const editing = !!business;
   // Fields added by the client's 2026-11 update, edited outside the main schema and merged on save.
@@ -129,6 +134,7 @@ export function BusinessForm({ business }: { business?: Business }) {
       category: values.category,
       services: csv(values.services),
       keywords: csv(values.keywords),
+      ownerId: ownerId || undefined,
       profileImage: values.profileImage || undefined,
       slug: values.slug || slugify(values.name),
     };
@@ -223,6 +229,12 @@ export function BusinessForm({ business }: { business?: Business }) {
                   )}
                 />
               </div>
+              <FormField label="Business owner" htmlFor="ownerId" hint="Demo relationship only; this does not grant server-side authorization." className="sm:col-span-2">
+                <NativeSelect id="ownerId" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+                  <option value="">No owner assigned</option>
+                  {ownerCandidates.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.email}</option>)}
+                </NativeSelect>
+              </FormField>
             </div>
           </Section>
 

@@ -2,6 +2,7 @@
 
 import { Award, Flag, Handshake, Medal, Percent, ShieldCheck, Siren, Star, type LucideIcon } from "lucide-react";
 import { useBusinessBadges } from "@/features/badges/hooks";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { BadgeIconKey, BadgeTone, BusinessBadge } from "@/types";
 
@@ -72,9 +73,9 @@ export function BadgeDetailList({ businessId }: { businessId: string }) {
         return (
           <li key={b.id} className="flex gap-3 rounded-md border bg-white p-3">
             <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset", BADGE_TONES[b.tone])}><Icon className="size-4" aria-hidden /></span>
-            <div>
-              <p className="text-sm font-semibold text-olive-950">{b.name}</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">{b.description}</p>
+            <div className="min-w-0 flex-1">
+              <Link href={`/directory?badges=${b.id}`} className="block break-words text-sm font-semibold text-olive-950 hover:text-olive-700 hover:underline">{b.name}</Link>
+              <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">{b.description}</p>
             </div>
           </li>
         );

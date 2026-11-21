@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ExternalLink, Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "./page-header";
+import { ImageUpload } from "./image-upload";
+import { ContentCategoriesManager } from "./content-categories-manager";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
 import { StatusPill } from "@/components/dashboard/status-pill";
@@ -18,9 +20,10 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { FREEBIE_CATEGORIES, FREEBIE_CATEGORY_LABEL } from "@/features/offers/rules";
+import { FREEBIE_CATEGORY_LABEL } from "@/features/offers/rules";
 import { useFreebies } from "@/features/offers/hooks";
 import { useSession } from "@/hooks/use-session";
+import { useAllContentCategories, useContentCategories } from "@/hooks/use-content-categories";
 import { formatDate, todayISO } from "@/lib/date";
 import { freebieService } from "@/services/offer-service";
 import type { Freebie, FreebieCategory } from "@/types";
@@ -29,20 +32,23 @@ const schema = z.object({
   title: z.string().trim().min(3, "Add the offer name").max(120),
   company: z.string().trim().min(2, "Add the company or organization").max(120),
   category: z.string().min(1, "Choose a category"),
+  subcategoryId: z.string(),
   summary: z.string().trim().min(10, "Add a short description").max(300),
   eligibility: z.string().trim().min(3, "Add eligibility information").max(300),
   offerDetails: z.string().trim().min(2, "Add the discount amount or offer details").max(120),
   url: z.string().trim().regex(/^https?:\/\/[^\s.]+\.[^\s]+$/i, "Enter the company's website or offer page (https://…)"),
+  image: z.string(),
   expiresOn: z.string(),
   active: z.boolean(),
 });
 type Values = z.infer<typeof schema>;
-const empty: Values = { title: "", company: "", category: "", summary: "", eligibility: "", offerDetails: "", url: "", expiresOn: "", active: true };
+const empty: Values = { title: "", company: "", category: "", subcategoryId: "", summary: "", eligibility: "", offerDetails: "", url: "", image: "", expiresOn: "", active: true };
 
 /** Admin / Staff → Freebies & Discounts (client update §2B "Employee Controls"). Needs "Manage offers & freebies". */
 export function FreebiesAdmin() {
   const user = useSession();
   const all = useFreebies();
+  const categories = useContentCategories("freebie");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [editing, setEditing] = useState<Freebie | "new" | null>(null);
@@ -66,7 +72,7 @@ export function FreebiesAdmin() {
       id: "title", header: "Offer", sort: (f) => f.title,
       cell: (f) => <span className="block max-w-[18rem]"><span className="block truncate font-semibold text-olive-950">{f.title}</span><span className="block truncate text-xs text-muted-foreground">{f.company}</span></span>,
     },
-    { id: "cat", header: "Category", hideBelow: "md", sort: (f) => f.category, cell: (f) => <span className="text-sm">{FREEBIE_CATEGORY_LABEL[f.category]}</span> },
+    { id: "cat", header: "Category", hideBelow: "md", sort: (f) => f.category, cell: (f) => <span className="text-sm">{categories.find((c) => c.id === f.category)?.name ?? FREEBIE_CATEGORY_LABEL[f.category] ?? f.category}</span> },
     { id: "details", header: "Offer details", hideBelow: "lg", cell: (f) => <span className="text-sm">{f.offerDetails}</span> },
     {
       id: "exp", header: "Expires", hideBelow: "sm", sort: (f) => f.expiresOn ?? "9999",
@@ -112,7 +118,7 @@ export function FreebiesAdmin() {
         search={{ placeholder: "Search offers or companies", text: (f) => `${f.title} ${f.company} ${f.summary}` }}
         filters={
           <>
-            <NativeSelect aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-52"><option value="">All categories</option>{FREEBIE_CATEGORIES.map((c) => <option key={c} value={c}>{FREEBIE_CATEGORY_LABEL[c]}</option>)}</NativeSelect>
+            <NativeSelect aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-52"><option value="">All categories</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
             <NativeSelect aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-40"><option value="">Any status</option><option value="active">Live</option><option value="inactive">Deactivated</option><option value="expired">Expired</option></NativeSelect>
           </>
         }
@@ -120,6 +126,7 @@ export function FreebiesAdmin() {
         empty={{ title: "No listings yet", description: "Add the first freebie or discount." }}
       />
       <FreebieSheet target={editing} onClose={() => setEditing(null)} />
+      <ContentCategoriesManager kind="freebie" />
       <ConfirmDialog
         open={!!toRemove}
         onOpenChange={(o) => !o && setToRemove(null)}
@@ -137,11 +144,14 @@ export function FreebiesAdmin() {
 
 function FreebieSheet({ target, onClose }: { target: Freebie | "new" | null; onClose: () => void }) {
   const user = useSession();
+  const categories = useContentCategories("freebie");
+  const allCategories = useAllContentCategories("freebie");
   const isNew = target === "new";
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: empty });
+  const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: empty });
+  const selectedCategory = useWatch({ control, name: "category" });
   useEffect(() => {
     if (!target) return;
-    reset(target === "new" ? empty : { ...target, expiresOn: target.expiresOn ?? "" });
+    reset(target === "new" ? empty : { ...target, image: target.image ?? "", expiresOn: target.expiresOn ?? "" });
   }, [target, reset]);
 
   async function onSubmit(v: Values) {
@@ -168,12 +178,19 @@ function FreebieSheet({ target, onClose }: { target: Freebie | "new" | null; onC
           <FormField label="Offer name" htmlFor="fb-title" error={errors.title?.message} required><Input id="fb-title" {...register("title")} /></FormField>
           <FormField label="Company or organization" htmlFor="fb-company" error={errors.company?.message} required><Input id="fb-company" {...register("company")} /></FormField>
           <FormField label="Category" htmlFor="fb-cat" error={errors.category?.message} required>
-            <NativeSelect id="fb-cat" {...register("category")}><option value="">Select…</option>{FREEBIE_CATEGORIES.map((c) => <option key={c} value={c}>{FREEBIE_CATEGORY_LABEL[c]}</option>)}</NativeSelect>
+            <NativeSelect id="fb-cat" {...register("category")}><option value="">Select…</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
+          </FormField>
+          <FormField label="Subcategory" htmlFor="fb-subcat" hint="Optional. Create subcategories below the table.">
+            <NativeSelect id="fb-subcat" {...register("subcategoryId")}>
+              <option value="">No subcategory</option>
+              {allCategories.filter((c) => c.parentId === selectedCategory && c.active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </NativeSelect>
           </FormField>
           <FormField label="Short description" htmlFor="fb-sum" error={errors.summary?.message} required><Textarea id="fb-sum" rows={3} {...register("summary")} /></FormField>
           <FormField label="Eligibility information" htmlFor="fb-elig" error={errors.eligibility?.message} required><Textarea id="fb-elig" rows={2} {...register("eligibility")} /></FormField>
           <FormField label="Discount amount or offer details" htmlFor="fb-details" error={errors.offerDetails?.message} required hint="e.g. “15% off”, “Free entrée on Veterans Day”"><Input id="fb-details" {...register("offerDetails")} /></FormField>
           <FormField label="Company website or offer page" htmlFor="fb-url" error={errors.url?.message} required><Input id="fb-url" type="url" {...register("url")} /></FormField>
+          <Controller control={control} name="image" render={({ field }) => <ImageUpload id="fb-image" label="Listing image (optional)" value={field.value} onChange={field.onChange} />} />
           <FormField label="Expiration date" htmlFor="fb-exp" hint="Optional. Hidden publicly after this date; a countdown shows until then."><Input id="fb-exp" type="date" {...register("expiresOn")} /></FormField>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-olive-700" {...register("active")} /> Active (visible publicly)</label>
         </form>

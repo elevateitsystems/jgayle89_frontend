@@ -16,10 +16,13 @@ export interface Freebie {
   title: string;
   company: string;
   category: FreebieCategory;
+  subcategoryId?: string;
   summary: string;
   eligibility: string;
   offerDetails: string; // "15% off", "Free entrée on Veterans Day"
   url: string;
+  /** Data URL in the demo; persistent media storage will be added with the backend. */
+  image?: string;
   expiresOn?: string; // ISO date
   active: boolean;
   createdAt: string;

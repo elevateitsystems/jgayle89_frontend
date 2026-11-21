@@ -81,6 +81,25 @@ export const businessService = {
     return next;
   },
 
+  async setFeatured(id: string, featured: boolean, actor?: Actor): Promise<Business> {
+    const all = businessStore.getSnapshot();
+    const current = all.find((b) => b.id === id);
+    if (!current) throw new Error("Business not found");
+    const maxOrder = Math.max(0, ...all.map((b) => b.featuredOrder ?? 0));
+    return this.update(id, { featured, featuredOrder: featured ? (current.featuredOrder ?? maxOrder + 1) : current.featuredOrder }, actor);
+  },
+
+  async moveFeatured(id: string, direction: "up" | "down", actor?: Actor): Promise<void> {
+    const featured = businessStore.getSnapshot().filter((b) => b.featured).sort((a, b) => (a.featuredOrder ?? 9999) - (b.featuredOrder ?? 9999));
+    const index = featured.findIndex((b) => b.id === id);
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || nextIndex < 0 || nextIndex >= featured.length) return;
+    const a = featured[index];
+    const b = featured[nextIndex];
+    await this.update(a.id, { featuredOrder: b.featuredOrder ?? nextIndex + 1 }, actor);
+    await this.update(b.id, { featuredOrder: a.featuredOrder ?? index + 1 }, actor);
+  },
+
   /**
    * Hiring status is the ONE listing field an owner may change directly (it needs no review).
    * Everything else goes through the edit-request workflow.

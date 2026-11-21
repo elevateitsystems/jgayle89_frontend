@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { BadgeCheck, Loader2, MoreHorizontal, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "./page-header";
+import { ImageUpload } from "./image-upload";
+import { ContentCategoriesManager } from "./content-categories-manager";
 import { CategoryBadge, DataStatusBadge, ScopeBadge } from "@/components/benefits/benefit-badges";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
@@ -20,10 +22,11 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { benefitAudiences, benefitCategories } from "@/data/benefit-categories";
+import { benefitAudiences } from "@/data/benefit-categories";
 import { US_STATES } from "@/data/us-states";
 import { useManagedBenefits } from "@/features/benefits/hooks";
 import { useSession } from "@/hooks/use-session";
+import { useAllContentCategories, useContentCategories } from "@/hooks/use-content-categories";
 import { formatDate, todayISO } from "@/lib/date";
 import { benefitAdminService, type ManagedBenefit } from "@/services/benefit-admin-service";
 import type { BenefitAudience, BenefitCategory } from "@/types";
@@ -36,15 +39,17 @@ const formSchema = z.object({
   description: z.string().trim().max(2000),
   eligibility: z.string().trim().max(1500),
   category: z.string().min(1, "Choose a category"),
+  subcategoryId: z.string(),
   audiences: z.array(z.string()).min(1, "Choose at least one military background"),
   state: z.string(),
   sourceUrl: url,
   applyUrl: z.union([z.literal(""), url]),
   expiresOn: z.string(),
+  image: z.string(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
-const empty: FormValues = { title: "", agency: "", summary: "", description: "", eligibility: "", category: "", audiences: ["veterans"], state: "", sourceUrl: "", applyUrl: "", expiresOn: "" };
+const empty: FormValues = { title: "", agency: "", summary: "", description: "", eligibility: "", category: "", subcategoryId: "", audiences: ["veterans"], state: "", sourceUrl: "", applyUrl: "", expiresOn: "", image: "" };
 
 /**
  * Admin / Staff → Benefits Management. Add programs, edit descriptions and links, categorise them, set end dates,
@@ -53,6 +58,7 @@ const empty: FormValues = { title: "", agency: "", summary: "", description: "",
 export function BenefitsAdmin() {
   const user = useSession();
   const managed = useManagedBenefits();
+  const categories = useContentCategories("benefit");
   const [category, setCategory] = useState("");
   const [state, setState] = useState<"" | "published" | "hidden" | "unverified" | "expired">("");
   const [editing, setEditing] = useState<ManagedBenefit | "new" | null>(null);
@@ -139,7 +145,7 @@ export function BenefitsAdmin() {
         search={{ placeholder: "Search programs", text: (m) => `${m.benefit.title} ${m.benefit.agency} ${m.benefit.tags.join(" ")}` }}
         filters={
           <>
-            <NativeSelect aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-48"><option value="">All categories</option>{benefitCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
+            <NativeSelect aria-label="Filter by category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-48"><option value="">All categories</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
             <NativeSelect aria-label="Filter by status" value={state} onChange={(e) => setState(e.target.value as typeof state)} className="w-44">
               <option value="">Any status</option><option value="published">Active</option><option value="hidden">Inactive</option><option value="unverified">Not yet verified</option><option value="expired">Expired</option>
             </NativeSelect>
@@ -149,6 +155,7 @@ export function BenefitsAdmin() {
         empty={{ title: "No benefit programs", description: "Add a program to get started." }}
       />
       <BenefitSheet target={editing} onClose={() => setEditing(null)} />
+      <ContentCategoriesManager kind="benefit" />
       <ConfirmDialog
         open={!!toRemove}
         onOpenChange={(o) => !o && setToRemove(null)}
@@ -166,12 +173,15 @@ export function BenefitsAdmin() {
 
 function BenefitSheet({ target, onClose }: { target: ManagedBenefit | "new" | null; onClose: () => void }) {
   const user = useSession();
+  const categories = useContentCategories("benefit");
+  const allCategories = useAllContentCategories("benefit");
   const isNew = target === "new";
   const managed = target && target !== "new" ? target : null;
   const {
     register, handleSubmit, reset, control,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: empty });
+  const selectedCategory = useWatch({ control, name: "category" });
 
   useEffect(() => {
     if (!target) return;
@@ -179,7 +189,7 @@ function BenefitSheet({ target, onClose }: { target: ManagedBenefit | "new" | nu
     const b = target.benefit;
     reset({
       title: b.title, agency: b.agency, summary: b.summary, description: b.description, eligibility: b.eligibility.join("\n"),
-      category: b.category, audiences: b.audiences ?? ["veterans"], state: b.state ?? "", sourceUrl: b.sourceUrl, applyUrl: b.applyUrl ?? "", expiresOn: b.expiresOn ?? "",
+      category: b.category, subcategoryId: b.subcategoryId ?? "", audiences: b.audiences ?? ["veterans"], state: b.state ?? "", sourceUrl: b.sourceUrl, applyUrl: b.applyUrl ?? "", expiresOn: b.expiresOn ?? "", image: b.image ?? "",
     });
   }, [target, reset]);
 
@@ -213,14 +223,20 @@ function BenefitSheet({ target, onClose }: { target: ManagedBenefit | "new" | nu
         <form id="benefit-form" onSubmit={handleSubmit(onSubmit)} noValidate className="flex-1 space-y-5 overflow-y-auto p-5">
           <FormField label="Program name" htmlFor="bn-title" error={errors.title?.message} required><Input id="bn-title" {...register("title")} /></FormField>
           <FormField label="Agency or organization" htmlFor="bn-agency" error={errors.agency?.message} required><Input id="bn-agency" disabled={!isNew} {...register("agency")} /></FormField>
-          <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Category" htmlFor="bn-cat" error={errors.category?.message} required>
-              <NativeSelect id="bn-cat" {...register("category")}><option value="">Select…</option>{benefitCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
+              <NativeSelect id="bn-cat" {...register("category")}><option value="">Select…</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
             </FormField>
             <FormField label="Availability" htmlFor="bn-state" hint={isNew ? undefined : "Set when the program is created."}>
               <NativeSelect id="bn-state" disabled={!isNew} {...register("state")}><option value="">Federal — all states</option>{US_STATES.map((s) => <option key={s.code} value={s.code}>{s.name} only</option>)}</NativeSelect>
             </FormField>
           </div>
+          <FormField label="Subcategory" htmlFor="bn-subcat" hint="Optional. Create subcategories below the table.">
+            <NativeSelect id="bn-subcat" {...register("subcategoryId")}>
+              <option value="">No subcategory</option>
+              {allCategories.filter((c) => c.parentId === selectedCategory && c.active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </NativeSelect>
+          </FormField>
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-olive-950">Military background <span className="text-destructive" aria-hidden>*</span></legend>
             <Controller
@@ -245,6 +261,7 @@ function BenefitSheet({ target, onClose }: { target: ManagedBenefit | "new" | nu
           <FormField label="Official website" htmlFor="bn-url" error={errors.sourceUrl?.message} required><Input id="bn-url" type="url" {...register("sourceUrl")} /></FormField>
           <FormField label="Official application link" htmlFor="bn-apply" error={errors.applyUrl?.message} hint="Optional — when it differs from the website."><Input id="bn-apply" type="url" {...register("applyUrl")} /></FormField>
           <FormField label="End date" htmlFor="bn-exp" hint="Optional. The program is hidden publicly after this date."><Input id="bn-exp" type="date" {...register("expiresOn")} /></FormField>
+          <Controller control={control} name="image" render={({ field }) => <ImageUpload id="bn-image" label="Program image (optional)" value={field.value} onChange={field.onChange} />} />
         </form>
         <SheetFooter className="flex-row justify-end gap-2 border-t border-sand-200 p-4">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

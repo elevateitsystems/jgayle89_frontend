@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Star, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Star, Trash2, ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "./page-header";
 import { StatusBadge } from "./status-badge";
@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCategories } from "@/hooks/use-categories";
@@ -37,6 +38,8 @@ import { useSession } from "@/hooks/use-session";
 import { useBusinesses } from "@/hooks/use-businesses";
 import { formatDate } from "@/lib/date";
 import { businessService } from "@/services/business-service";
+import { useStore } from "@/hooks/use-store";
+import { userStore } from "@/services/user-service";
 import type { Business, ListingStatus } from "@/types";
 
 const PAGE_SIZE = 8;
@@ -46,6 +49,7 @@ export function BusinessesTable() {
   const router = useRouter();
   const { businesses, loading } = useBusinesses();
   const { categories, categoryName } = useCategories();
+  const users = useStore(userStore);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
@@ -85,6 +89,11 @@ export function BusinessesTable() {
   async function changeStatus(b: Business, next: ListingStatus) {
     await businessService.update(b.id, { status: next }, viewer ?? undefined);
     toast.success(`${b.name} is now ${next}`);
+  }
+
+  async function setFeatured(b: Business, featured: boolean) {
+    try { await businessService.setFeatured(b.id, featured, viewer ?? undefined); toast.success(featured ? `${b.name} added to Featured` : `${b.name} removed from Featured`); }
+    catch (e) { toast.error("Couldn't update Featured", { description: e instanceof Error ? e.message : undefined }); }
   }
 
   return (
@@ -152,6 +161,7 @@ export function BusinessesTable() {
                 <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden lg:table-cell">Rating (demo)</TableHead>
+                <TableHead className="hidden xl:table-cell">Owner / Featured</TableHead>
                 <TableHead className="hidden xl:table-cell">Added</TableHead>
                 <TableHead className="w-14 pr-4 text-right"><span className="sr-only">Actions</span></TableHead>
               </TableRow>
@@ -177,6 +187,19 @@ export function BusinessesTable() {
                       <Star className="size-3.5 fill-brass text-brass" aria-hidden /> {b.rating.toFixed(1)}
                       <span className="text-xs text-muted-foreground">({b.reviewCount})</span>
                     </span>
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    <div className="space-y-2">
+                      <p className="max-w-44 truncate text-xs text-muted-foreground">{b.ownerId ? users.find((u) => u.id === b.ownerId)?.name ?? b.ownerId : "No owner assigned"}</p>
+                      <div className="flex items-center gap-2">
+                        <Switch size="sm" checked={b.featured} onCheckedChange={(v) => setFeatured(b, v)} aria-label={`${b.name} featured`} />
+                        <span className="text-xs">Featured</span>
+                        {b.featured && <>
+                          <Button variant="ghost" size="icon-xs" aria-label={`Move ${b.name} up`} onClick={() => businessService.moveFeatured(b.id, "up", viewer ?? undefined)}><ArrowUp /></Button>
+                          <Button variant="ghost" size="icon-xs" aria-label={`Move ${b.name} down`} onClick={() => businessService.moveFeatured(b.id, "down", viewer ?? undefined)}><ArrowDown /></Button>
+                        </>}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground xl:table-cell">{formatDate(b.createdAt)}</TableCell>
                   <TableCell className="pr-4 text-right">

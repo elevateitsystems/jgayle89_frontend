@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, CheckCircle2, ExternalLink, MapPin } from "lucide-react";
 import { AssistanceButton } from "@/components/membership/assistance-button";
 import { stateName } from "@/data/us-states";
@@ -11,6 +12,7 @@ import type { Benefit } from "@/types";
 export function BenefitCard({ benefit: b }: { benefit: Benefit }) {
   return (
     <article className="flex h-full flex-col rounded-lg border bg-card p-5 shadow-card transition-all duration-200 hover:border-olive-300 hover:shadow-lift">
+      {b.image && <div className="relative -mx-5 -mt-5 mb-4 aspect-[16/8] overflow-hidden bg-sand-200"><Image src={b.image} alt="" fill sizes="(min-width: 1024px) 360px, 100vw" className="object-cover" unoptimized={b.image.startsWith("data:")} /></div>}
       <div className="flex flex-wrap items-center gap-2">
         <CategoryBadge category={b.category} />
         <ScopeBadge benefit={b} />

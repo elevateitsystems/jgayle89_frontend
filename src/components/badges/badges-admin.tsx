@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Pencil, Plus, ShieldOff } from "lucide-react";
@@ -45,7 +47,7 @@ export function BadgesAdmin() {
         title={admin ? "Business badges" : "Badge management"}
         description="Verification badges are assigned by staff after review. The only automatic badge is the one marked “auto-award to paid plans” (Verified Business)."
       />
-      <Tabs defaultValue={canAssign ? "assignments" : "types"}>
+      <Tabs defaultValue={canAssign && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("badge") ? "assignments" : canAssign ? "assignments" : "types"}>
         <TabsList className="mb-4 h-auto max-w-full flex-wrap justify-start p-1">
           {canAssign && <TabsTrigger value="assignments" className="h-9 px-4">Assignments</TabsTrigger>}
           <TabsTrigger value="types" className="h-9 px-4">Badge types</TabsTrigger>
@@ -66,7 +68,8 @@ function Assignments() {
   const { businesses, loading } = useBusinesses();
   const [assigning, setAssigning] = useState(false);
   const [revoking, setRevoking] = useState<BadgeAssignment | null>(null);
-  const [filter, setFilter] = useState("");
+  const params = useSearchParams();
+  const [filter, setFilter] = useState(() => params.get("badge") ?? "");
 
   const nameOf = (id: string) => businesses.find((b) => b.id === id)?.name ?? id;
   const badgeOf = (id: string) => badges.find((b) => b.id === id);
@@ -227,10 +230,10 @@ function BadgeTypes({ canEdit }: { canEdit: boolean }) {
   }
 
   const columns: Column<BusinessBadge>[] = [
-    { id: "badge", header: "Badge", sort: (b) => b.sortOrder, cell: (b) => <BadgePill badge={b} size="md" /> },
-    { id: "desc", header: "Meaning", hideBelow: "md", cell: (b) => <span className="block max-w-sm text-sm text-muted-foreground">{b.description}</span> },
+    { id: "badge", header: "Badge", sort: (b) => b.sortOrder, cell: (b) => <Link href={`/admin/badges/${b.id}`} className="inline-flex max-w-full"><BadgePill badge={b} size="md" /></Link> },
+    { id: "desc", header: "Meaning", hideBelow: "md", cell: (b) => <span className="block max-w-sm break-words text-sm leading-relaxed text-muted-foreground">{b.description}</span> },
     { id: "docs", header: "Documents", hideBelow: "lg", cell: (b) => (b.requiresDocuments ? "Required" : "Optional") },
-    { id: "held", header: "Holders", hideBelow: "sm", sort: (b) => assignments.filter((a) => a.badgeId === b.id && a.status === "active").length, cell: (b) => <span className="tabular-nums">{assignments.filter((a) => a.badgeId === b.id && a.status === "active").length}</span> },
+    { id: "held", header: "Holders", hideBelow: "sm", sort: (b) => assignments.filter((a) => a.badgeId === b.id && a.status === "active").length, cell: (b) => <Link href={`/admin/badges/${b.id}`} className="tabular-nums text-olive-700 hover:underline">{assignments.filter((a) => a.badgeId === b.id && a.status === "active").length}</Link> },
     {
       id: "active", header: "Active", sort: (b) => Number(b.active),
       cell: (b) => canEdit ? <Switch checked={b.active} onCheckedChange={(v) => (v ? setActive(b, true) : setDeactivate(b))} aria-label={`${b.name} active`} /> : <StatusPill tone={b.active ? "good" : "neutral"}>{b.active ? "Active" : "Inactive"}</StatusPill>,
