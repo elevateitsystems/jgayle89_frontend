@@ -115,3 +115,54 @@ export interface PromoCredit {
   grantedOn: string;
   expiresOn: string;
 }
+
+export type SponsorshipRequestStatus = "submitted" | "in_review" | "contacted" | "resolved" | "closed";
+
+export interface SponsorshipRequest {
+  id: string;
+  businessId: string;
+  businessName: string;
+  requesterId: string;
+  requesterName: string;
+  requesterEmail: string;
+  details: string;
+  status: SponsorshipRequestStatus;
+  staffNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SponsorshipAssignmentState = "scheduled" | "active" | "expired" | "cancelled";
+
+export interface SponsorshipAssignment {
+  id: string;
+  businessId: string;
+  businessName: string;
+  packageId: string;
+  packageName: string;
+  placement: string;
+  startDate: string;
+  endDate: string;
+  status: SponsorshipAssignmentState;
+  notes?: string;
+  assignedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PromotionAssignment {
+  id: string;
+  businessId: string;
+  businessName: string;
+  sourceOfferId: string;
+  promotionTitle: string;
+  discountText: string;
+  description: string;
+  audience: string;
+  startDate: string;
+  endDate?: string;
+  status: "scheduled" | "active" | "expired" | "cancelled";
+  assignedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}

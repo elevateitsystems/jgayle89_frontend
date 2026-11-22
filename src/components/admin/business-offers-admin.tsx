@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Eye, EyeOff, MessageSquareWarning, MoreHorizontal, NotebookPen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AdminBusinessLink } from "./entity-links";
+import { SearchableBusinessSelector } from "./searchable-business-selector";
 import { PageHeader } from "./page-header";
 import { ConfirmDialog } from "@/components/dashboard/confirm-dialog";
 import { DataTable, type Column } from "@/components/dashboard/data-table";
@@ -19,7 +20,6 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { awaitingFrom, offerDisplayStatus, requiredApprovals, OFFER_AUDIENCE_LABEL } from "@/features/offers/rules";
 import { useOffers } from "@/features/offers/hooks";
-import { useBusinesses } from "@/hooks/use-businesses";
 import { useSession } from "@/hooks/use-session";
 import { useSiteSettings } from "@/hooks/use-settings";
 import { formatDate, todayISO } from "@/lib/date";
@@ -41,7 +41,6 @@ export function BusinessOffersAdmin() {
   const user = useSession();
   const settings = useSiteSettings();
   const offers = useOffers();
-  const { businesses } = useBusinesses();
   const [filter, setFilter] = useState<string>("needs_staff");
   const [editing, setEditing] = useState<BusinessOffer | "new" | null>(null);
   const [newBusinessId, setNewBusinessId] = useState("");
@@ -131,7 +130,7 @@ export function BusinessOffersAdmin() {
         label="Business offers"
         pageSize={10}
         defaultSort={{ id: "dates", dir: "desc" }}
-        search={{ placeholder: "Search offers", text: (o) => `${o.title} ${o.discountText} ${businesses.find((b) => b.id === o.businessId)?.name ?? ""}` }}
+        search={{ placeholder: "Search offers", text: (o) => `${o.title} ${o.discountText} ${o.audience} ${o.businessId}` }}
         filters={
           <NativeSelect aria-label="Filter by status" value={filter} onChange={(e) => setFilter(e.target.value)} className="w-56">
             <option value="">All offers</option>
@@ -147,14 +146,7 @@ export function BusinessOffersAdmin() {
         onOpenChange={(o) => !o && setEditing(null)}
         offer={editing && editing !== "new" ? editing : null}
         approvalNote={approvalNoteFor(staffRequires)}
-        before={editing === "new" ? (
-          <FormField label="Business" htmlFor="of-biz" required>
-            <NativeSelect id="of-biz" value={newBusinessId} onChange={(e) => setNewBusinessId(e.target.value)}>
-              <option value="">Select a business…</option>
-              {[...businesses].sort((a, b) => a.name.localeCompare(b.name)).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </NativeSelect>
-          </FormField>
-        ) : undefined}
+        before={editing === "new" ? <SearchableBusinessSelector value={newBusinessId} onChange={setNewBusinessId} id="of-biz" /> : undefined}
         onSubmit={async (input) => {
           if (!user) return;
           try {

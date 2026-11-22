@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import {
   Award, BadgeCheck, BarChart3, CalendarDays, CreditCard, FileEdit, FileUp, HandCoins, Images, Landmark, LayoutDashboard,
-  Megaphone, Receipt, Settings, ShieldCheck, Store, Tags, UserCog, Users, Wallet, Gift, Percent, ShoppingBag, ClipboardList,
+  Megaphone, Receipt, Settings, ShieldCheck, Store, Tags, UserCog, Users, Wallet, Gift, Percent, ShoppingBag, ClipboardList, MessageSquare,
   CalendarCheck, LineChart, History, type LucideIcon,
 } from "lucide-react";
 import { AccessDenied } from "@/components/auth/access-gate";
@@ -33,6 +33,8 @@ const sectionIcon: Record<AdminSectionId, LucideIcon> = {
   "ad-products": HandCoins,
   campaigns: Megaphone,
   "sponsorship-approvals": Wallet,
+  "sponsorship-packages": HandCoins,
+  "sponsorship-operations": MessageSquare,
   "advertising-reviews": Receipt,
   payments: Receipt,
   reports: BarChart3,

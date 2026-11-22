@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CreditCard, Eye, Gift, MousePointerClick, Plus, Megaphone } from "lucide-react";
+import { CreditCard, Eye, Gift, Loader2, MessageSquare, MousePointerClick, Plus, Megaphone } from "lucide-react";
 import { CampaignDetail } from "./campaign-detail";
 import { PageHeader } from "@/components/admin/page-header";
 import { NoBusinesses } from "@/components/business/business-picker";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { NativeSelect } from "@/components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdProducts, useCampaigns, useCredits } from "@/features/advertising/hooks";
+import { usePromotionAssignments, useSponsorshipAssignments } from "@/features/advertising/hooks";
 import { GROUP_LABEL, awaitingPayment, credits as creditRules, displayStatus, groupOf, slotsAvailableOn, type CampaignGroup } from "@/features/advertising/rules";
 import { useOwnedBusinesses } from "@/features/business/hooks";
 import { formatPrice } from "@/features/membership/access";
@@ -24,6 +25,10 @@ import { daysFromToday, formatDate, todayISO } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import type { CheckoutRequest } from "@/services/payments-service";
 import type { AdCampaign, AdFamily, AdProduct } from "@/types";
+import { promotionAssignmentStatus, sponsorshipAssignmentStatus, sponsorshipService } from "@/services/sponsorship-service";
+import { FormField } from "@/components/ui/form-field";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const COPY: Record<AdFamily, { title: string; description: string; empty: string }> = {
   advertising: { title: "Advertisements", description: "Promote a listing in search results, categories, the homepage or a banner. Bought separately from your membership.", empty: "No advertising campaigns yet" },
@@ -47,6 +52,9 @@ export function AdHub({ family }: { family: AdFamily }) {
   const impressions = mine.reduce((n, c) => n + c.impressions, 0);
   const clicks = mine.reduce((n, c) => n + c.clicks, 0);
   const balance = businesses.reduce((n, b) => n + creditRules.balance(credits, b.id, today), 0);
+  const sponsorshipAssignments = useSponsorshipAssignments().filter((a) => businesses.some((b) => b.id === a.businessId));
+  const promotionAssignments = usePromotionAssignments().filter((a) => businesses.some((b) => b.id === a.businessId));
+  const [requestOpen, setRequestOpen] = useState(false);
 
   // Allowances included with the owner's plans, summed across their businesses, for this family's products.
   const allowances = useMemo(() => {
@@ -74,25 +82,26 @@ export function AdHub({ family }: { family: AdFamily }) {
       <Tabs defaultValue="marketplace">
         <TabsList className="mb-4 h-auto p-1">
           <TabsTrigger value="marketplace" className="h-9 px-4">Marketplace</TabsTrigger>
-          <TabsTrigger value="campaigns" className="h-9 px-4">My campaigns ({mine.length})</TabsTrigger>
+          <TabsTrigger value="campaigns" className="h-9 px-4">{family === "sponsorship" ? "Assigned placements" : `My campaigns (${mine.length})`}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="marketplace">
           <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {familyProducts.map((p) => (
-              <li key={p.id}><ProductCard product={p} campaigns={campaigns} included={allowances.get(p.id) ?? 0} /></li>
+              <li key={p.id}><ProductCard product={p} campaigns={campaigns} included={allowances.get(p.id) ?? 0} sponsorship={family === "sponsorship"} onRequest={() => setRequestOpen(true)} /></li>
             ))}
           </ul>
           <p className="mt-6 text-xs text-muted-foreground">Prices are per campaign. Every public placement is labelled “Sponsored” or “Advertisement”. Included placements from your membership plan are redeemed at checkout once billing is connected.</p>
         </TabsContent>
 
-        <TabsContent value="campaigns"><MyCampaigns campaigns={mine} products={products} loading={loading} empty={copy.empty} /></TabsContent>
+        <TabsContent value="campaigns">{family === "sponsorship" ? <><AssignedSponsorships assignments={sponsorshipAssignments} /><AssignedPromotions assignments={promotionAssignments} /></> : <MyCampaigns campaigns={mine} products={products} loading={loading} empty={copy.empty} />}</TabsContent>
       </Tabs>
+      {family === "sponsorship" && <SponsorshipRequestDialog open={requestOpen} onOpenChange={setRequestOpen} businesses={businesses} />}
     </>
   );
 }
 
-function ProductCard({ product: p, campaigns, included }: { product: AdProduct; campaigns: AdCampaign[]; included: number }) {
+function ProductCard({ product: p, campaigns, included, sponsorship, onRequest }: { product: AdProduct; campaigns: AdCampaign[]; included: number; sponsorship: boolean; onRequest: () => void }) {
   const from = Math.min(...p.durations.map((d) => d.price));
   const open = slotsAvailableOn(p, campaigns, daysFromToday(3), p.durations[0]?.days ?? 7);
   return (
@@ -110,7 +119,9 @@ function ProductCard({ product: p, campaigns, included }: { product: AdProduct; 
       </dl>
       <div className="mt-auto flex items-end justify-between gap-3 pt-5">
         <p><span className="text-xs text-muted-foreground">from</span> <span className="font-heading text-2xl font-semibold tabular-nums text-olive-950">{formatPrice(from)}</span></p>
-        {p.active ? (
+        {p.active && sponsorship ? (
+          <Button size="sm" onClick={onRequest}><MessageSquare /> Speak with staff</Button>
+        ) : p.active ? (
           <Link href={`/dashboard/campaigns/new?product=${p.id}`} className={buttonVariants({ size: "sm" })}><Plus /> Create campaign</Link>
         ) : (
           <Button size="sm" disabled>Unavailable</Button>
@@ -118,6 +129,28 @@ function ProductCard({ product: p, campaigns, included }: { product: AdProduct; 
       </div>
     </article>
   );
+}
+
+function AssignedSponsorships({ assignments }: { assignments: ReturnType<typeof useSponsorshipAssignments> }) {
+  return <section className="mb-6 rounded-lg border bg-card p-5 shadow-card"><h2 className="font-semibold text-olive-950">Assigned sponsorships</h2><p className="mt-1 text-sm text-muted-foreground">Staff-assigned sponsorship placements for your businesses.</p>{assignments.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">No sponsorships have been assigned yet.</p> : <ul className="mt-4 grid gap-3 md:grid-cols-2">{assignments.map((a) => { const s = sponsorshipAssignmentStatus(a); return <li key={a.id} className="rounded-md border bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-olive-950">{a.packageName}</p><StatusPill tone={s === "active" ? "good" : s === "scheduled" ? "info" : "neutral"}>{s === "scheduled" ? "Upcoming" : s[0].toUpperCase() + s.slice(1)}</StatusPill></div><p className="mt-1 text-sm text-muted-foreground">{a.businessName} · {a.placement}</p><p className="mt-2 text-xs text-muted-foreground">{formatDate(a.startDate)} – {formatDate(a.endDate)}</p></li>; })}</ul>}</section>;
+}
+
+function AssignedPromotions({ assignments }: { assignments: ReturnType<typeof usePromotionAssignments> }) {
+  return <section className="mb-6 rounded-lg border bg-card p-5 shadow-card"><h2 className="font-semibold text-olive-950">Assigned promotions</h2><p className="mt-1 text-sm text-muted-foreground">Promotions placed on your business listings by staff.</p>{assignments.length === 0 ? <p className="mt-4 text-sm text-muted-foreground">No promotions have been assigned yet.</p> : <ul className="mt-4 space-y-3">{assignments.map((a) => { const s = promotionAssignmentStatus(a); return <li key={a.id} className="rounded-md border bg-white p-4"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-olive-950">{a.promotionTitle}</p><StatusPill tone="good">{a.discountText}</StatusPill><StatusPill tone={s === "active" ? "good" : s === "scheduled" ? "info" : "neutral"}>{s === "scheduled" ? "Upcoming" : s[0].toUpperCase() + s.slice(1)}</StatusPill></div><p className="mt-1 text-sm text-muted-foreground">{a.businessName} · {a.description}</p></li>; })}</ul>}</section>;
+}
+
+function SponsorshipRequestDialog({ open, onOpenChange, businesses }: { open: boolean; onOpenChange: (open: boolean) => void; businesses: { id: string; name: string }[] }) {
+  const user = useSession();
+  const [businessId, setBusinessId] = useState(businesses[0]?.id ?? "");
+  const [details, setDetails] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function submit() {
+    if (!user) return; setSaving(true);
+    try { await sponsorshipService.submitRequest({ businessId, details }, user); toast.success("Request sent to staff"); setDetails(""); onOpenChange(false); }
+    catch (e) { toast.error("Couldn't send the request", { description: e instanceof Error ? e.message : undefined }); }
+    finally { setSaving(false); }
+  }
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Speak with staff about sponsorship</DialogTitle><DialogDescription>Tell Mission: SITREP what kind of sponsorship opportunity you are considering. Staff will follow up; no campaign or payment is created here.</DialogDescription></DialogHeader><div className="space-y-4"><FormField label="Business" htmlFor="sreq-biz" required><NativeSelect id="sreq-biz" value={businessId} onChange={(e) => setBusinessId(e.target.value)}>{businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</NativeSelect></FormField><FormField label="What would you like to discuss?" htmlFor="sreq-details" required><Textarea id="sreq-details" rows={5} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="For example: event, newsletter, resource or location sponsorship…" /></FormField></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button onClick={submit} disabled={saving || !businessId || details.trim().length < 10}>{saving ? <><Loader2 className="animate-spin" /> Sending…</> : "Send request"}</Button></DialogFooter></DialogContent></Dialog>;
 }
 
 const GROUPS: CampaignGroup[] = ["active", "pending", "completed", "expired", "rejected"];

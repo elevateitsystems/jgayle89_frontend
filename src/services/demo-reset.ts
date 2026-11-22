@@ -12,6 +12,7 @@ import { appointmentStore, savedStore } from "@/services/member-service";
 import { planService, subscriptionService } from "@/services/membership-service";
 import { settingsService } from "@/services/settings-service";
 import { userService } from "@/services/user-service";
+import { sponsorshipService } from "@/services/sponsorship-service";
 
 /**
  * DEMO ONLY: restores every browser-stored collection to its seed data. The signed-in session is kept
@@ -35,6 +36,7 @@ export function resetAllDemoData() {
   customBenefitStore.reset();
   freebieService.reset();
   offerService.reset();
+  sponsorshipService.reset();
   marketplaceService.reset();
   auditService.reset();
 }

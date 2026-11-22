@@ -26,6 +26,7 @@ export interface PlanInput {
   active: boolean;
   highlighted: boolean;
   features: Record<string, PlanFeatureValue>;
+  sponsorshipDiscountPercent?: number;
 }
 
 const plansNow = () => planStore.getSnapshot();
@@ -61,6 +62,7 @@ export const planService = {
       sortOrder: order,
       features: normalizeFeatures(input.audience, input.features),
       adAllowances: {},
+      ...(input.sponsorshipDiscountPercent !== undefined ? { sponsorshipDiscountPercent: input.sponsorshipDiscountPercent } : {}),
       stripe: { monthlyPriceId: null, annualPriceId: null },
       createdAt: daysFromToday(0),
     };
@@ -80,6 +82,7 @@ export const planService = {
       ...input,
       name: input.name !== undefined ? input.name.trim() : current.name,
       features: input.features ? normalizeFeatures(current.audience, input.features) : current.features,
+      ...(input.sponsorshipDiscountPercent !== undefined ? { sponsorshipDiscountPercent: input.sponsorshipDiscountPercent } : {}),
     };
     planStore.set(all.map((p) => (p.id === id ? next : p)));
     return next;

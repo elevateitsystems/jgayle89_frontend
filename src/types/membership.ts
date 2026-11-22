@@ -43,6 +43,8 @@ export interface MembershipPlan {
   features: Record<string, PlanFeatureValue>;
   /** Advertising products included per month with this plan: AdProduct.id → included placements. */
   adAllowances: Record<string, number>;
+  /** Optional, configurable sponsorship discount. Empty means no discount configured. */
+  sponsorshipDiscountPercent?: number;
   /** Stripe Price ids. Placeholders until the Stripe integration is connected. */
   stripe: { monthlyPriceId: string | null; annualPriceId: string | null };
   createdAt: string;

@@ -78,6 +78,8 @@ export type AdminSectionId =
   | "ad-products"
   | "campaigns"
   | "sponsorship-approvals"
+  | "sponsorship-packages"
+  | "sponsorship-operations"
   | "advertising-reviews"
   | "payments"
   | "reports"
@@ -124,12 +126,14 @@ export const ADMIN_SECTIONS: (AdminSection & { group: AdminGroup })[] = [
   { id: "edit-requests", group: "Reviews", label: "Business Edit Requests", href: "/admin/edit-requests", requires: perm("edits.review") },
   { id: "verification", group: "Reviews", label: "Business Verification", href: "/admin/verification", requires: perm("verification.review") },
   { id: "sponsorship-approvals", group: "Reviews", label: "Sponsorship Approvals", href: "/admin/sponsorship-approvals", requires: perm("sponsorships.review") },
+  { id: "sponsorship-operations", group: "Reviews", label: "Sponsorship Operations", staffLabel: "Sponsorship Requests", href: "/admin/sponsorship-operations", requires: perm("sponsorships.review") },
   { id: "advertising-reviews", group: "Reviews", label: "Advertising Reviews", href: "/admin/advertising-reviews", requires: perm("advertising.review") },
   { id: "business-offers", group: "Reviews", label: "Business Offers", href: "/admin/business-offers", requires: perm("offers.manage") },
   { id: "appointments", group: "Reviews", label: "Appointments", href: "/admin/appointments", requires: perm("appointments.manage") },
   { id: "plans", group: "Membership & revenue", label: "Membership Plans", href: "/admin/plans", requires: { kind: "admin" } },
   { id: "subscriptions", group: "Membership & revenue", label: "Subscriptions", href: "/admin/subscriptions", requires: { kind: "admin" } },
   { id: "ad-products", group: "Membership & revenue", label: "Sponsorship Products", href: "/admin/ad-products", requires: { kind: "admin" } },
+  { id: "sponsorship-packages", group: "Membership & revenue", label: "Sponsorship Packages", href: "/admin/sponsorship-packages", requires: { kind: "admin" } },
   { id: "campaigns", group: "Membership & revenue", label: "Advertising Campaigns", href: "/admin/campaigns", requires: { kind: "admin" } },
   { id: "payments", group: "Membership & revenue", label: "Payments & Transactions", href: "/admin/payments", requires: { kind: "admin" } },
   { id: "services", group: "Membership & revenue", label: "Services Marketplace", href: "/admin/services", requires: anyOf("services.manage", "services.discounts") },

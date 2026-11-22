@@ -47,7 +47,7 @@ describe("navigation per access group", () => {
       [...ids(all)].sort(),
       [
         "advertising-reviews", "appointments", "badges", "benefits", "business-offers", "businesses", "categories", "dashboard", "edit-requests",
-        "events", "freebies", "import", "photos", "service-orders", "services", "sponsorship-approvals", "users", "verification",
+        "events", "freebies", "import", "photos", "service-orders", "services", "sponsorship-approvals", "sponsorship-operations", "users", "verification",
       ],
     );
     for (const adminOnly of ["staff", "business-analytics", "activity", "plans", "subscriptions", "ad-products", "campaigns", "payments", "reports", "settings"]) {

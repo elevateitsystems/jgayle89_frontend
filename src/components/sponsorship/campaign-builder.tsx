@@ -54,6 +54,9 @@ export function CampaignBuilder() {
       </EmptyState>
     );
   }
+  if (product.family === "sponsorship") {
+    return <EmptyState title="Sponsorships are arranged with staff" description="Business owners cannot create or purchase sponsorship campaigns directly. Use the Sponsorships dashboard to request a conversation with Mission: SITREP staff." />;
+  }
   return <BuilderForm key={editing?.id ?? product.id} product={product} businesses={businesses} editing={editing} />;
 }
 
