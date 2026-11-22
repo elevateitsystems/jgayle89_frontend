@@ -31,6 +31,7 @@ import { hasPermission, isAdmin } from "@/lib/permissions";
 import { assignBadgeSchema, badgeSchema, revokeSchema, type AssignBadgeValues, type BadgeFormValues } from "@/schemas/badge";
 import { badgeService } from "@/services/badge-service";
 import type { BadgeAssignment, BusinessBadge } from "@/types";
+import { cn } from "@/lib/utils";
 
 /**
  * Admin & Staff → Business Badges (client update §5, §11C). Assigning, switching off and removing badges needs
@@ -48,10 +49,10 @@ export function BadgesAdmin() {
         description="Verification badges are assigned by staff after review. The only automatic badge is the one marked “auto-award to paid plans” (Verified Business)."
       />
       <Tabs defaultValue={canAssign && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("badge") ? "assignments" : canAssign ? "assignments" : "types"}>
-        <TabsList className="mb-4 h-auto max-w-full flex-wrap justify-start p-1">
-          {canAssign && <TabsTrigger value="assignments" className="h-9 px-4">Assignments</TabsTrigger>}
-          <TabsTrigger value="types" className="h-9 px-4">Badge types</TabsTrigger>
-          <TabsTrigger value="history" className="h-9 px-4">Change history</TabsTrigger>
+        <TabsList className={cn("mb-4 grid h-10 w-full max-w-sm bg-sand-100 p-1", canAssign ? "grid-cols-3" : "grid-cols-2")}>
+          {canAssign && <TabsTrigger value="assignments" className="h-8 w-full px-3 data-active:bg-white data-active:shadow-sm">Assignments</TabsTrigger>}
+          <TabsTrigger value="types" className="h-8 w-full px-3 data-active:bg-white data-active:shadow-sm">Badge types</TabsTrigger>
+          <TabsTrigger value="history" className="h-8 w-full px-3 data-active:bg-white data-active:shadow-sm">Change history</TabsTrigger>
         </TabsList>
         {canAssign && <TabsContent value="assignments"><Assignments /></TabsContent>}
         <TabsContent value="types"><BadgeTypes canEdit={canTypes} /></TabsContent>

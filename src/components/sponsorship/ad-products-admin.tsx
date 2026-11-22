@@ -32,7 +32,8 @@ import { planService } from "@/services/membership-service";
 import type { AdProduct, PromoCredit } from "@/types";
 
 /** Admin → Sponsorship Products: products & pricing, inventory, promotional credits and per-plan included placements. */
-export function AdProductsAdmin() {
+export function AdProductsAdmin({ family }: { family?: "advertising" | "sponsorship" } = {}) {
+  if (family === "sponsorship") return <><PageHeader title="Sponsorship packages" description="Create, edit, price, activate or deactivate the sponsorship packages staff can assign to businesses." /><Products family={family} /></>;
   return (
     <>
       <PageHeader title="Sponsorship products" description="Create and price advertising and sponsorship products, control inventory, grant promotional credits and decide what each membership plan includes." />
@@ -42,7 +43,7 @@ export function AdProductsAdmin() {
           <TabsTrigger value="credits" className="h-9 px-4">Promotional credits</TabsTrigger>
           <TabsTrigger value="plans" className="h-9 px-4">Plan benefits</TabsTrigger>
         </TabsList>
-        <TabsContent value="products"><Products /></TabsContent>
+        <TabsContent value="products"><Products family={family} /></TabsContent>
         <TabsContent value="credits"><Credits /></TabsContent>
         <TabsContent value="plans"><PlanBenefits /></TabsContent>
       </Tabs>
@@ -50,13 +51,14 @@ export function AdProductsAdmin() {
   );
 }
 
-function Products() {
+function Products({ family }: { family?: "advertising" | "sponsorship" }) {
   const user = useSession();
   const products = useAdProducts();
   const campaigns = useCampaigns();
   const [editing, setEditing] = useState<AdProduct | null>(null);
   const [open, setOpen] = useState(false);
   const [deactivate, setDeactivate] = useState<AdProduct | null>(null);
+  const [deleting, setDeleting] = useState<AdProduct | null>(null);
   const today = daysFromToday(0);
 
   async function setActive(p: AdProduct, active: boolean) {
@@ -65,6 +67,7 @@ function Products() {
     toast.success(active ? `${p.name} is available again` : `${p.name} was deactivated`);
   }
 
+  const visibleProducts = family ? products.filter((p) => p.family === family) : products;
   const columns: Column<AdProduct>[] = [
     { id: "name", header: "Product", sort: (p) => p.name, cell: (p) => <span className="block max-w-[16rem]"><span className="block truncate font-semibold text-olive-950">{p.name}</span><span className="block truncate text-xs text-muted-foreground">{p.placement}</span></span> },
     { id: "family", header: "Type", hideBelow: "md", sort: (p) => p.family, cell: (p) => <span className="capitalize">{p.family}</span> },
@@ -74,22 +77,22 @@ function Products() {
       cell: (p) => { const used = slotsUsedDuring(p, campaigns, today, daysFromToday(30)); return <span className="tabular-nums">{used} / {p.totalSlots}</span>; },
     },
     { id: "active", header: "Active", sort: (p) => Number(p.active), cell: (p) => <Switch checked={p.active} onCheckedChange={(v) => (v ? setActive(p, true).catch(() => toast.error("Couldn't update")) : setDeactivate(p))} aria-label={`${p.name} active`} /> },
-    { id: "edit", header: "Edit", srOnlyHeader: true, cell: (p) => <Button variant="ghost" size="icon-sm" aria-label={`Edit ${p.name}`} onClick={() => { setEditing(p); setOpen(true); }}><Pencil /></Button> },
+    { id: "edit", header: "Actions", srOnlyHeader: true, cell: (p) => <span className="flex justify-end gap-1"><Button variant="ghost" size="icon-sm" aria-label={`Edit ${p.name}`} onClick={() => { setEditing(p); setOpen(true); }}><Pencil /></Button><Button variant="ghost" size="icon-sm" aria-label={`Delete ${p.name}`} onClick={() => setDeleting(p)}><Trash2 /></Button></span> },
   ];
 
   return (
     <>
       <DataTable
-        rows={products}
+        rows={visibleProducts}
         columns={columns}
         rowKey={(p) => p.id}
         label="Advertising products"
         defaultSort={{ id: "name", dir: "asc" }}
         search={{ placeholder: "Search products", text: (p) => `${p.name} ${p.description} ${p.family}` }}
-        filters={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus /> New product</Button>}
+        filters={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus /> New {family === "sponsorship" ? "package" : "product"}</Button>}
         empty={{ title: "No products", description: "Create the first advertising product.", actionLabel: "New product", onAction: () => setOpen(true) }}
       />
-      <ProductSheet open={open} onOpenChange={setOpen} product={editing} />
+      <ProductSheet open={open} onOpenChange={setOpen} product={editing} fixedFamily={family} />
       <ConfirmDialog
         open={!!deactivate}
         onOpenChange={(o) => !o && setDeactivate(null)}
@@ -100,14 +103,25 @@ function Products() {
         busyLabel="Deactivating…"
         onConfirm={async () => { if (deactivate) await setActive(deactivate, false); }}
       />
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        destructive
+        title="Delete this package?"
+        description={<>This permanently removes <strong>{deleting?.name}</strong>. Packages with campaign history must be deactivated instead.</>}
+        confirmLabel="Delete package"
+        busyLabel="Deleting…"
+        successMessage="Package deleted"
+        onConfirm={async () => { if (deleting && user) await adService.removeProduct(deleting.id, user); }}
+      />
     </>
   );
 }
 
-function ProductSheet({ open, onOpenChange, product }: { open: boolean; onOpenChange: (o: boolean) => void; product: AdProduct | null }) {
+function ProductSheet({ open, onOpenChange, product, fixedFamily }: { open: boolean; onOpenChange: (o: boolean) => void; product: AdProduct | null; fixedFamily?: "advertising" | "sponsorship" }) {
   const user = useSession();
   const editing = !!product;
-  const blank: AdProductFormValues = { name: "", description: "", placement: "", label: "Sponsored", family: "advertising", targeting: "none", totalSlots: 3, active: true, needsImage: false, needsLogo: false, imageSpec: "", durations: [{ days: 7, price: 50 }] };
+  const blank: AdProductFormValues = { name: "", description: "", placement: "", label: fixedFamily === "sponsorship" ? "Sponsored" : "Advertisement", family: fixedFamily ?? "advertising", targeting: "none", totalSlots: 3, active: true, needsImage: false, needsLogo: false, imageSpec: "", durations: [{ days: 7, price: 50 }] };
   const {
     register, control, handleSubmit, reset,
     formState: { errors, isSubmitting },
@@ -121,7 +135,7 @@ function ProductSheet({ open, onOpenChange, product }: { open: boolean; onOpenCh
   async function onSubmit(v: AdProductFormValues) {
     if (!user) return;
     try {
-      const data = { ...v, kind: product?.kind ?? "featured_search", durations: [...v.durations].sort((a, b) => a.days - b.days) } as Omit<AdProduct, "id">;
+      const data = { ...v, family: fixedFamily ?? v.family, kind: product?.kind ?? (fixedFamily === "sponsorship" ? "geo_sponsorship" : "featured_search"), durations: [...v.durations].sort((a, b) => a.days - b.days) } as Omit<AdProduct, "id">;
       if (product) await adService.updateProduct(product.id, data, user);
       else await adService.createProduct(data, user);
       toast.success(editing ? "Product updated" : "Product created");
@@ -141,7 +155,7 @@ function ProductSheet({ open, onOpenChange, product }: { open: boolean; onOpenCh
           <FormField label="Description" htmlFor="ap-desc" error={err.description?.message} required><Textarea id="ap-desc" rows={2} {...register("description")} /></FormField>
           <FormField label="Where it appears" htmlFor="ap-place" error={err.placement?.message} required><Input id="ap-place" {...register("placement")} /></FormField>
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField label="Type" htmlFor="ap-family"><NativeSelect id="ap-family" {...register("family")}><option value="advertising">Advertising</option><option value="sponsorship">Sponsorship</option></NativeSelect></FormField>
+            {!fixedFamily ? <FormField label="Type" htmlFor="ap-family"><NativeSelect id="ap-family" {...register("family")}><option value="advertising">Advertising</option><option value="sponsorship">Sponsorship</option></NativeSelect></FormField> : <input type="hidden" {...register("family")} value={fixedFamily} />}
             <FormField label="Public label" htmlFor="ap-label"><NativeSelect id="ap-label" {...register("label")}><option>Sponsored</option><option>Advertisement</option></NativeSelect></FormField>
             <FormField label="Targeting" htmlFor="ap-target"><NativeSelect id="ap-target" {...register("targeting")}><option value="none">None</option><option value="category">Categories</option><option value="geo">States / city</option><option value="event">Event</option><option value="resource">Resource</option></NativeSelect></FormField>
           </div>

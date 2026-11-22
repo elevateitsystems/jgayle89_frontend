@@ -5,6 +5,7 @@ import { useStore } from "@/hooks/use-store";
 import { liveCampaigns, ofKind } from "@/features/advertising/rules";
 import { todayISO } from "@/lib/date";
 import { adProductStore, campaignStore, creditStore } from "@/services/ad-service";
+import { promotionAssignmentStore, sponsorshipAssignmentStore, sponsorshipRequestStore } from "@/services/sponsorship-service";
 import type { AdProduct } from "@/types";
 
 export function useAdProducts() {
@@ -15,6 +16,18 @@ export function useCampaigns() {
 }
 export function useCredits() {
   return useStore(creditStore);
+}
+
+export function useSponsorshipRequests() {
+  return useStore(sponsorshipRequestStore);
+}
+
+export function useSponsorshipAssignments() {
+  return useStore(sponsorshipAssignmentStore);
+}
+
+export function usePromotionAssignments() {
+  return useStore(promotionAssignmentStore);
 }
 
 /**

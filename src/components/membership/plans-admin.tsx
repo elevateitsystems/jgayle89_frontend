@@ -147,8 +147,8 @@ function defaultFeatures(audience: PlanAudience): Record<string, PlanFeatureValu
 
 function PlanFormSheet({ open, onOpenChange, plan, cloneFrom, defaultAudience }: { open: boolean; onOpenChange: (o: boolean) => void; plan: MembershipPlan | null; cloneFrom: MembershipPlan | null; defaultAudience: PlanAudience }) {
   const editing = !!plan;
-  const blank = (audience: PlanAudience): PlanFormValues => ({ audience, name: "", tagline: "", description: "", monthlyPrice: 0, annualPrice: 0, active: true, highlighted: false, features: defaultFeatures(audience) });
-  const fromPlan = (p: MembershipPlan, copy: boolean): PlanFormValues => ({ audience: p.audience, name: copy ? `${p.name} copy` : p.name, tagline: p.tagline, description: p.description, monthlyPrice: p.monthlyPrice, annualPrice: p.annualPrice, active: copy ? false : p.active, highlighted: copy ? false : p.highlighted, features: { ...defaultFeatures(p.audience), ...p.features } });
+  const blank = (audience: PlanAudience): PlanFormValues => ({ audience, name: "", tagline: "", description: "", monthlyPrice: 0, annualPrice: 0, active: true, highlighted: false, sponsorshipDiscountPercent: undefined, features: defaultFeatures(audience) });
+  const fromPlan = (p: MembershipPlan, copy: boolean): PlanFormValues => ({ audience: p.audience, name: copy ? `${p.name} copy` : p.name, tagline: p.tagline, description: p.description, monthlyPrice: p.monthlyPrice, annualPrice: p.annualPrice, active: copy ? false : p.active, highlighted: copy ? false : p.highlighted, sponsorshipDiscountPercent: p.sponsorshipDiscountPercent, features: { ...defaultFeatures(p.audience), ...p.features } });
 
   const {
     register, control, handleSubmit, reset, setValue,
@@ -220,6 +220,7 @@ function PlanFormSheet({ open, onOpenChange, plan, cloneFrom, defaultAudience }:
             </div>
             <Controller control={control} name="highlighted" render={({ field }) => <Row id="pl-hl" label="Highlight as “Most popular”" checked={field.value} onChange={field.onChange} />} />
             <Controller control={control} name="active" render={({ field }) => <Row id="pl-active" label="Active (visible on pricing pages)" checked={field.value} onChange={field.onChange} />} />
+            {audience === "business" && <FormField label="Sponsorship discount (optional %)" htmlFor="pl-sponsor-discount" error={errors.sponsorshipDiscountPercent?.message} hint="Leave blank until the client approves a discount. This only prepares the setting; it does not apply a discount by itself."><Input id="pl-sponsor-discount" type="number" min={0} max={100} step="0.1" placeholder="Not configured" {...register("sponsorshipDiscountPercent", { valueAsNumber: true, setValueAs: (v) => v === "" ? undefined : Number(v) })} /></FormField>}
           </fieldset>
 
           <Controller

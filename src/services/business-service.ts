@@ -23,6 +23,15 @@ export const businessService = {
     return businessStore.getSnapshot();
   },
 
+  /** Paginated search seam for admin selectors; replace this body with an API query when available. */
+  async search(query: string, page = 1, pageSize = 8): Promise<{ items: Business[]; page: number; pageSize: number; total: number; hasNext: boolean }> {
+    await delay(150);
+    const needle = query.trim().toLowerCase();
+    const matches = businessStore.getSnapshot().filter((b) => !needle || `${b.name} ${b.city} ${b.state} ${b.zip} ${b.email}`.toLowerCase().includes(needle));
+    const start = Math.max(0, page - 1) * pageSize;
+    return { items: matches.slice(start, start + pageSize), page, pageSize, total: matches.length, hasNext: start + pageSize < matches.length };
+  },
+
   async getBySlug(slug: string): Promise<Business | undefined> {
     await delay(150);
     return businessStore.getSnapshot().find((b) => b.slug === slug);

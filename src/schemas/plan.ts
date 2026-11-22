@@ -13,6 +13,7 @@ export const planSchema = z
     annualPrice: money("annual"),
     active: z.boolean(),
     highlighted: z.boolean(),
+    sponsorshipDiscountPercent: z.number().min(0).max(100).optional(),
     features: z.record(
       z.string(),
       z.object({

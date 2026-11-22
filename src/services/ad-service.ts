@@ -83,6 +83,15 @@ export const adService = {
     return next;
   },
 
+  async removeProduct(id: string, admin: Reviewer): Promise<void> {
+    await delay(300);
+    requireAdmin(admin, "delete advertising products");
+    if (campaigns().some((c) => c.productId === id)) throw new Error("This package has campaign history. Deactivate it instead of deleting it.");
+    const current = products().find((p) => p.id === id);
+    if (!current) throw new Error("Product not found.");
+    adProductStore.set(products().filter((p) => p.id !== id));
+  },
+
   // ---- Admin: promotional credits
   async grantCredit(input: { businessId: string; amount: number; reason: string; expiresOn: string }, admin: Reviewer): Promise<PromoCredit> {
     await delay(400);
